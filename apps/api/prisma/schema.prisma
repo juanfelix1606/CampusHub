@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  LECTURER
+  STUDENT
+}
+
+model User {
+  id                    String              @id @default(uuid()) @db.Uuid
+  name                  String
+  email                 String              @unique
+  passwordHash          String
+  role                  UserRole            @default(STUDENT)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  refreshTokens         RefreshToken[]
+  taughtSections        ClassSection[]      @relation("SectionLecturer")
+  enrollments           Enrollment[]
+  materialsCreated      Material[]          @relation("MaterialAuthor")
+  submissions           Submission[]
+  attendanceSessions    AttendanceSession[] @relation("AttendanceSessionLecturer")
+  attendances           Attendance[]
+  announcementsAuthored Announcement[]      @relation("AnnouncementAuthor")
+  notifications         Notification[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model Semester {
+  id        String         @id @default(uuid()) @db.Uuid
+  name      String         @unique
+  startsAt  DateTime       @db.Date
+  endsAt    DateTime       @db.Date
+  isActive  Boolean        @default(false)
+  createdAt DateTime       @default(now())
+  sections  ClassSection[]
+
+  @@index([isActive])
+}
+
+model Course {
+  id        String         @id @default(uuid()) @db.Uuid
+  code      String         @unique
+  name      String
+  credits   Int
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  sections  ClassSection[]
+
+  @@index([name])
+}
+
+model ClassSection {
+  id                 String              @id @default(uuid()) @db.Uuid
+  courseId           String              @db.Uuid
+  semesterId         String              @db.Uuid
+  lecturerId         String              @db.Uuid
+  name               String
+  capacity           Int                 @default(60)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  course             Course              @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  semester           Semester            @relation(fields: [semesterId], references: [id], onDelete: Restrict)
+  lecturer           User                @relation("SectionLecturer", fields: [lecturerId], references: [id], onDelete: Restrict)
+  enrollments        Enrollment[]
+  materials          Material[]
+  assignments        Assignment[]
+  attendanceSessions AttendanceSession[]
+  announcements      Announcement[]
+
+  @@unique([courseId, semesterId, name])
+  @@index([lecturerId, semesterId])
+}
+
+model Enrollment {
+  id         String       @id @default(uuid()) @db.Uuid
+  sectionId  String       @db.Uuid
+  studentId  String       @db.Uuid
+  enrolledAt DateTime     @default(now())
+  section    ClassSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  student    User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, studentId])
+  @@index([studentId])
+}
+
+model Material {
+  id          String       @id @default(uuid()) @db.Uuid
+  sectionId   String       @db.Uuid
+  lecturerId  String       @db.Uuid
+  title       String
+  description String?
+  fileKey     String
+  fileName    String
+  contentType String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  section     ClassSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  lecturer    User         @relation("MaterialAuthor", fields: [lecturerId], references: [id], onDelete: Restrict)
+
+  @@index([sectionId, createdAt])
+}
+
+model Assignment {
+  id          String       @id @default(uuid()) @db.Uuid
+  sectionId   String       @db.Uuid
+  title       String
+  description String?
+  deadline    DateTime
+  maxScore    Int          @default(100)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  section     ClassSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+
+  @@index([sectionId, deadline])
+}
+
+model Submission {
+  id           String     @id @default(uuid()) @db.Uuid
+  assignmentId String     @db.Uuid
+  studentId    String     @db.Uuid
+  fileKey      String
+  fileName     String
+  submittedAt  DateTime   @default(now())
+  score        Decimal?   @db.Decimal(5, 2)
+  feedback     String?
+  gradedAt     DateTime?
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId])
+  @@index([studentId, submittedAt])
+}
+
+model AttendanceSession {
+  id          String       @id @default(uuid()) @db.Uuid
+  sectionId   String       @db.Uuid
+  lecturerId  String       @db.Uuid
+  tokenHash   String       @unique
+  expiresAt   DateTime
+  closedAt    DateTime?
+  createdAt   DateTime     @default(now())
+  section     ClassSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  lecturer    User         @relation("AttendanceSessionLecturer", fields: [lecturerId], references: [id], onDelete: Restrict)
+  attendances Attendance[]
+
+  @@index([sectionId, createdAt])
+}
+
+model Attendance {
+  id          String            @id @default(uuid()) @db.Uuid
+  sessionId   String            @db.Uuid
+  studentId   String            @db.Uuid
+  checkedInAt DateTime          @default(now())
+  session     AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student     User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+  @@index([studentId, checkedInAt])
+}
+
+model Announcement {
+  id        String        @id @default(uuid()) @db.Uuid
+  authorId  String        @db.Uuid
+  sectionId String?       @db.Uuid
+  title     String
+  body      String
+  createdAt DateTime      @default(now())
+  author    User          @relation("AnnouncementAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  section   ClassSection? @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([sectionId, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+}

@@ -1,0 +1,32 @@
+{
+  "name": "campushub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CampusHub - campus LMS and QR attendance portfolio project",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @campushub/api",
+    "dev:web": "npm run dev --workspace @campushub/web",
+    "build": "npm run build --workspace @campushub/api && npm run build --workspace @campushub/web",
+    "test": "npm run test --workspace @campushub/api",
+    "test:unit": "npm run test:unit --workspace @campushub/api",
+    "test:integration": "npm run test:integration --workspace @campushub/api",
+    "db:generate": "npm run db:generate --workspace @campushub/api",
+    "db:migrate": "npm run db:migrate --workspace @campushub/api",
+    "db:deploy": "npm run db:deploy --workspace @campushub/api",
+    "db:seed": "npm run db:seed --workspace @campushub/api"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "prisma@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "esbuild@0.28.2": true,
+    "esbuild@0.25.12": true
+  }
+}

@@ -1,0 +1,2 @@
+ALTER TABLE "ClassSection"
+ADD COLUMN "capacity" INTEGER NOT NULL DEFAULT 60;
