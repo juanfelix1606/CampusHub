@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { pipeline } from "node:stream/promises";
 import { paginationSchema, uuidSchema } from "../../shared/pagination";
 import { materialFieldsSchema, materialUpdateSchema } from "./material.schemas";
 import { MaterialService } from "./material.service";
@@ -56,7 +57,7 @@ export class MaterialController {
     response
       .setHeader("Content-Type", material.contentType)
       .setHeader("Content-Disposition", `attachment; filename="${material.fileName}"`)
-      .setHeader("X-Content-Type-Options", "nosniff")
-      .send(contents);
+      .setHeader("X-Content-Type-Options", "nosniff");
+    await pipeline(contents, response);
   };
 }

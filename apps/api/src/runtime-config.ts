@@ -3,6 +3,76 @@ import type { AuthConfig } from "./modules/auth/auth.types";
 export interface RuntimeConfig {
   port: number;
   auth: AuthConfig;
+  storage: StorageConfig;
+}
+
+export interface S3StorageConfig {
+  driver: "s3";
+  endpoint: string;
+  region: string;
+  bucket: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  forcePathStyle: boolean;
+}
+
+export type StorageConfig = { driver: "local"; directory?: string } | S3StorageConfig;
+
+function readBoolean(name: string, value: string | undefined, defaultValue: boolean): boolean {
+  if (value === undefined || value === "") return defaultValue;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new Error(`${name} must be true or false.`);
+}
+
+export function loadStorageConfig(
+  environment: NodeJS.ProcessEnv,
+  production: boolean,
+): StorageConfig {
+  const driver = environment.STORAGE_DRIVER || "local";
+  if (driver === "local") {
+    if (production && !readBoolean("ALLOW_LOCAL_STORAGE", environment.ALLOW_LOCAL_STORAGE, false)) {
+      throw new Error(
+        "Local storage is disabled in production; configure S3 or explicitly set ALLOW_LOCAL_STORAGE=true.",
+      );
+    }
+    return { driver, directory: environment.MATERIAL_STORAGE_DIR || undefined };
+  }
+  if (driver !== "s3") throw new Error("STORAGE_DRIVER must be local or s3.");
+
+  function required(name: string): string {
+    const value = environment[name];
+    if (!value?.trim()) throw new Error(`${name} is required when STORAGE_DRIVER=s3.`);
+    return value;
+  }
+  const endpoint = required("S3_ENDPOINT");
+  let url: URL;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    throw new Error("S3_ENDPOINT must be an absolute HTTP(S) URL.");
+  }
+  if (
+    !["http:", "https:"].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error("S3_ENDPOINT must be an HTTP(S) URL without credentials, query, or fragment.");
+  }
+  if (production && url.protocol !== "https:") {
+    throw new Error("S3_ENDPOINT must use HTTPS in production.");
+  }
+  return {
+    driver,
+    endpoint,
+    region: required("S3_REGION"),
+    bucket: required("S3_BUCKET"),
+    accessKeyId: required("S3_ACCESS_KEY_ID"),
+    secretAccessKey: required("S3_SECRET_ACCESS_KEY"),
+    forcePathStyle: readBoolean("S3_FORCE_PATH_STYLE", environment.S3_FORCE_PATH_STYLE, false),
+  };
 }
 
 export function loadRuntimeConfig(environment: NodeJS.ProcessEnv = process.env): RuntimeConfig {
@@ -37,6 +107,7 @@ export function loadRuntimeConfig(environment: NodeJS.ProcessEnv = process.env):
 
   return {
     port,
+    storage: loadStorageConfig(environment, production),
     auth: {
       accessTokenSecret,
       attendanceQrSecret,

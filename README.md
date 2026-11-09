@@ -71,7 +71,7 @@ Akun dan password tersebut hanya untuk development/demo lokal. Jangan gunakan pa
 - Unit: `npm run test:unit`
 - Integration dengan PostgreSQL terpisah: mulai `docker compose --profile test up -d db-test`, pastikan `TEST_DATABASE_URL` menunjuk ke database bernama `*_test`, lalu `npm run test:integration`. Migrasi test dijalankan otomatis; suite menolak URL database yang tidak berakhiran `_test`.
 - Quality gates: `npm run lint` dan `npm run format:check`.
-- End-to-end: seed database test dengan `DEMO_PASSWORD` yang sama untuk akun demo, lalu jalankan `npm run test:e2e`. Playwright menguji dosen membuat tugas dan mahasiswa mengumpulkannya; browser Chromium perlu tersedia (`npx playwright install chromium`).
+- End-to-end: terapkan migrasi dan seed database test dengan `DEMO_PASSWORD` yang sama untuk akun demo, lalu jalankan `npm run test:e2e`. Playwright menguji dosen membuat tugas, mahasiswa mengumpulkan, dosen memberi nilai, serta mahasiswa melihat nilai, feedback, dan notifikasi. Browser Chromium perlu tersedia (`npx playwright install chromium`). Tes akan menolak server yang sudah menggunakan port API/web agar tidak salah memakai database lain.
 - `npm test` menjalankan unit test saja. Integration test memodifikasi database khusus yang URL-nya disediakan; jangan arahkan ke database development/production. Suite mencakup repository Prisma dan constraint PostgreSQL.
 - Pull request dan push ke `main` menjalankan GitHub Actions: install, lint, format check, build, unit test, integration test dengan service PostgreSQL, lalu E2E di database yang sama setelah seed akun demo khusus CI.
 
@@ -84,6 +84,18 @@ Akun dan password tersebut hanya untuk development/demo lokal. Jangan gunakan pa
 - Database menegakkan satu submission aktif per mahasiswa/tugas dan batas nilai maksimum melalui unique constraint, check constraint, serta trigger PostgreSQL.
 - Endpoint utama: `GET /api/v1/assignments`, `POST /api/v1/classes/:classId/assignments`, `POST /api/v1/assignments/:assignmentId/submissions/me`, `GET /api/v1/assignments/:assignmentId/submissions`, dan `PATCH /api/v1/assignments/:assignmentId/submissions/:submissionId/grade`.
 - UI tugas dosen berada di `/lecturer/assignments`; mahasiswa mengakses `/student/assignments`.
+
+## Storage privat
+
+`STORAGE_DRIVER` kosong atau `local` menyimpan file di direktori `MATERIAL_STORAGE_DIR`; cocok untuk pengembangan, tetapi disk hosting gratis biasanya tidak persisten. Production menolak storage lokal kecuali `ALLOW_LOCAL_STORAGE=true` diatur secara eksplisit setelah memahami risikonya. Untuk production pilih `STORAGE_DRIVER=s3` dan isi `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, serta `S3_FORCE_PATH_STYLE` (`true` atau `false`). Endpoint S3 wajib HTTPS di production. Simpan kredensial hanya di environment backend, jangan di frontend atau Git.
+
+Bucket harus dibuat **privat** di provider; aplikasi tidak mengubah pengaturan bucket atau membuat URL publik. File diunggah dengan nama acak, validasi ukuran/MIME/magic bytes tetap berlaku, dan unduhan di-stream melalui API setelah pemeriksaan hak akses. Penyiapan privasi bucket dan kebijakan akses adalah tanggung jawab administrator provider. Akses kunci S3 Supabase melewati RLS, jadi kunci hanya boleh berada di server dan otorisasi API tetap wajib.
+
+- **Cloudflare R2:** buat bucket privat dan kredensial S3 di Cloudflare; gunakan endpoint `https://<account-id>.r2.cloudflarestorage.com`, region `auto`, dan nama bucket. R2 mengharuskan aktivasi subscription/checkout; periksa syarat pembayaran dan batas gratis di dashboard.
+- **Supabase Storage:** buat bucket privat, gunakan endpoint `https://<project-ref>.storage.supabase.co/storage/v1/s3`, region proyek, dan `S3_FORCE_PATH_STYLE=true`; kunci S3 didapat dari pengaturan storage proyek.
+- **MinIO lokal:** isi `MINIO_ROOT_USER` dan `MINIO_ROOT_PASSWORD` di `.env`, lalu jalankan `docker compose --profile storage up -d minio`. Buka console `http://localhost:9001`, buat bucket privat, dan isi variabel S3 dengan endpoint `http://127.0.0.1:9000`, region `us-east-1`, nama bucket, kredensial MinIO lokal, serta `S3_FORCE_PATH_STYLE=true`. Jangan gunakan kredensial ini di production.
+
+Test storage lokal berjalan pada direktori sementara; unit test S3 memakai server HTTP mock untuk memeriksa request SDK dan propagasi error. CI juga menjalankan integration test materi dan submission dua kali, dengan storage lokal dan bucket MinIO privat, termasuk otorisasi unduhan. Untuk menjalankan integration test S3 secara lokal, buat bucket MinIO terpisah khusus test, konfigurasi variabel S3, dan jalankan `npm run test:integration` dengan `STORAGE_DRIVER=s3`. Jangan gunakan bucket production untuk test.
 
 ## Absensi QR dinamis (Fase 5)
 

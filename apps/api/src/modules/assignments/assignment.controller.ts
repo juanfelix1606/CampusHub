@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { pipeline } from "node:stream/promises";
 import { uuidSchema } from "../../shared/pagination";
 import {
   assignmentInputSchema,
@@ -132,8 +133,8 @@ export class AssignmentController {
     response
       .setHeader("Content-Type", file.contentType)
       .setHeader("Content-Disposition", `attachment; filename="${file.fileName}"`)
-      .setHeader("X-Content-Type-Options", "nosniff")
-      .send(file.contents);
+      .setHeader("X-Content-Type-Options", "nosniff");
+    await pipeline(file.contents, response);
   };
 
   downloadSubmission = async (request: Request, response: Response): Promise<void> => {
@@ -145,8 +146,8 @@ export class AssignmentController {
     response
       .setHeader("Content-Type", file.contentType)
       .setHeader("Content-Disposition", `attachment; filename="${file.fileName}"`)
-      .setHeader("X-Content-Type-Options", "nosniff")
-      .send(file.contents);
+      .setHeader("X-Content-Type-Options", "nosniff");
+    await pipeline(file.contents, response);
   };
 
   downloadSubmissionVersion = async (request: Request, response: Response): Promise<void> => {
@@ -159,7 +160,7 @@ export class AssignmentController {
     response
       .setHeader("Content-Type", file.contentType)
       .setHeader("Content-Disposition", `attachment; filename="${file.fileName}"`)
-      .setHeader("X-Content-Type-Options", "nosniff")
-      .send(file.contents);
+      .setHeader("X-Content-Type-Options", "nosniff");
+    await pipeline(file.contents, response);
   };
 }

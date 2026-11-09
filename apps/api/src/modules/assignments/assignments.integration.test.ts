@@ -6,7 +6,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../../app";
 import { PrismaAuthRepository } from "../auth/auth.repository";
-import type { FileStorage } from "../materials/file-storage";
+import { IntegrationFileStorage } from "../../testing/integration-file-storage";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (!databaseUrl)
@@ -18,22 +18,7 @@ if (!new URL(databaseUrl).pathname.replace(/^\//, "").endsWith("_test")) {
 const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
 const marker = `assignments-integration-${randomUUID()}`;
 const secret = "postgres-integration-test-secret-longer-than-32-characters";
-class MemoryFileStorage implements FileStorage {
-  files = new Map<string, Buffer>();
-  async save(key: string, contents: Buffer) {
-    this.files.set(key, Buffer.from(contents));
-  }
-  async read(key: string) {
-    const contents = this.files.get(key);
-    if (!contents) throw new Error("File not found.");
-    return Buffer.from(contents);
-  }
-  async delete(key: string) {
-    this.files.delete(key);
-  }
-}
-
-const storage = new MemoryFileStorage();
+const storage = IntegrationFileStorage.create();
 const app = createApp(
   {
     accessTokenSecret: secret,
@@ -178,6 +163,7 @@ beforeAll(async () => {
 }, 20_000);
 
 afterAll(async () => {
+  await storage.cleanup();
   await prisma.classSection.deleteMany({ where: { id: ids.section } });
   await prisma.course.deleteMany({ where: { id: ids.course } });
   await prisma.semester.deleteMany({ where: { id: ids.semester } });
@@ -409,7 +395,8 @@ describe("assignments, submissions, and grading with PostgreSQL", () => {
     await request(app)
       .get(`/api/v1/assignments/${ids.assignment}/submissions/${submissionId}/file`)
       .set(bearer(ids.student, UserRole.STUDENT))
-      .expect(200);
+      .expect(200)
+      .expect((response) => expect(response.body.toString()).toContain("%PDF-1.4"));
     const historicalVersion = await prisma.submissionVersion.findFirstOrThrow({
       where: { submissionId, fileKey: { not: null } },
     });
@@ -445,7 +432,7 @@ describe("assignments, submissions, and grading with PostgreSQL", () => {
         contentType: "application/pdf",
       })
       .expect(400);
-    expect(storage.files.size).toBe(1);
+    expect(storage.keys.size).toBe(1);
   });
 
   it("enforces the score maximum in PostgreSQL and filters assignment statuses", async () => {

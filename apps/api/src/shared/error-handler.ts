@@ -10,7 +10,12 @@ export const notFoundHandler: RequestHandler = (_request, response) => {
   });
 };
 
-export const errorHandler: ErrorRequestHandler = (error: unknown, _request, response, _next) => {
+export const errorHandler: ErrorRequestHandler = (error: unknown, _request, response, next) => {
+  if (response.headersSent || response.destroyed) {
+    console.error("Streaming response failed:", error);
+    next(error);
+    return;
+  }
   if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
     error = new PayloadTooLargeError("Material files must be 10 MB or smaller.");
   }

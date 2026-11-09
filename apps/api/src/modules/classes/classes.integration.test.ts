@@ -6,7 +6,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../../app";
 import { PrismaAuthRepository } from "../auth/auth.repository";
-import type { FileStorage } from "../materials/file-storage";
+import { IntegrationFileStorage } from "../../testing/integration-file-storage";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (!databaseUrl) throw new Error("TEST_DATABASE_URL is required for class integration tests.");
@@ -26,22 +26,7 @@ const config = {
   cookieSecure: false,
 };
 
-class MemoryFileStorage implements FileStorage {
-  files = new Map<string, Buffer>();
-  async save(key: string, contents: Buffer) {
-    this.files.set(key, Buffer.from(contents));
-  }
-  async read(key: string) {
-    const contents = this.files.get(key);
-    if (!contents) throw new Error("File not found.");
-    return Buffer.from(contents);
-  }
-  async delete(key: string) {
-    this.files.delete(key);
-  }
-}
-
-const storage = new MemoryFileStorage();
+const storage = IntegrationFileStorage.create();
 const app = createApp(config, new PrismaAuthRepository(prisma), {
   database: prisma,
   materialStorage: storage,
@@ -145,6 +130,7 @@ beforeAll(async () => {
 }, 20_000);
 
 afterAll(async () => {
+  await storage.cleanup();
   await prisma.classSection.deleteMany({
     where: { id: { in: [ids.section, ids.concurrentSection] } },
   });
@@ -232,7 +218,7 @@ describe("course, class, enrollment, and material access with PostgreSQL", () =>
       .delete(`/api/v1/materials/${materialId}`)
       .set(bearer(ids.lecturer, UserRole.LECTURER))
       .expect(204);
-    expect(storage.files.size).toBe(0);
+    expect(storage.keys.size).toBe(0);
   });
 
   it("rejects mismatched and spoofed upload types", async () => {
