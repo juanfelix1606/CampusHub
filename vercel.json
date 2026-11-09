@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build --workspace @campushub/web",
+  "outputDirectory": "apps/web/dist",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://REPLACE-WITH-YOUR-SERVICE.onrender.com/api/$1",
+      "transforms": [
+        {
+          "type": "request.headers",
+          "op": "set",
+          "target": { "key": "x-origin-secret" },
+          "args": "$ORIGIN_PROXY_SECRET",
+          "env": ["ORIGIN_PROXY_SECRET"]
+        }
+      ]
+    },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}

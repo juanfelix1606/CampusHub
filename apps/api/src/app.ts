@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { AuthController } from "./modules/auth/auth.controller";
 import { createAuthRouter } from "./modules/auth/auth.routes";
 import { AuthService } from "./modules/auth/auth.service";
@@ -87,7 +88,7 @@ export function createApp(
     }),
   );
 
-  app.set("trust proxy", config.cookieSecure ? 1 : false);
+  app.set("trust proxy", config.proxyHops ?? (config.cookieSecure ? 1 : false));
   app.disable("x-powered-by");
   app.use(helmet());
   app.use(
@@ -96,6 +97,32 @@ export function createApp(
       credentials: true,
     }),
   );
+  app.get("/api/v1/health", (_request, response) => {
+    response.status(200).json({ status: "ok" });
+  });
+  if (config.cookieSecure) {
+    if (!config.originSecret) throw new Error("ORIGIN_PROXY_SECRET is required in production.");
+    const expected = createHash("sha256").update(config.originSecret).digest();
+    app.use((request, response, next) => {
+      const actual = createHash("sha256")
+        .update(request.get("x-origin-secret") ?? "")
+        .digest();
+      if (!timingSafeEqual(expected, actual)) {
+        response
+          .status(403)
+          .json({ error: { code: "FORBIDDEN", message: "Origin access denied." } });
+        return;
+      }
+      next();
+    });
+  }
+  app.get("/api/v1/proxy-diagnostic", (request, response) => {
+    if (!config.proxyDiagnostics) {
+      response.sendStatus(404);
+      return;
+    }
+    response.set("Cache-Control", "no-store").json({ clientIp: request.ip });
+  });
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: false, limit: "1mb" }));
   app.use(cookieParser());
@@ -108,10 +135,7 @@ export function createApp(
     }),
   );
 
-  app.get("/api/v1/health", (_request, response) => {
-    response.status(200).json({ status: "ok" });
-  });
-  app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
+  if (!config.cookieSecure) app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
   app.use("/api/v1/auth", createAuthRouter(authController, config));
   app.use("/api/v1/courses", createCourseRouter(courseController, config.accessTokenSecret));
   app.use("/api/v1/classes", createClassRouter(classController, config.accessTokenSecret));

@@ -76,9 +76,9 @@ export function loadStorageConfig(
 }
 
 export function loadRuntimeConfig(environment: NodeJS.ProcessEnv = process.env): RuntimeConfig {
-  const port = Number(environment.API_PORT ?? 3000);
+  const port = Number(environment.PORT ?? environment.API_PORT ?? 3000);
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new Error("API_PORT must be a valid TCP port.");
+    throw new Error("PORT or API_PORT must be a valid TCP port.");
   }
 
   const accessTokenSecret = environment.JWT_ACCESS_SECRET;
@@ -104,6 +104,22 @@ export function loadRuntimeConfig(environment: NodeJS.ProcessEnv = process.env):
   if (production && parsedOrigin.protocol !== "https:") {
     throw new Error("WEB_ORIGIN must use HTTPS in production.");
   }
+  const originSecret = environment.ORIGIN_PROXY_SECRET;
+  if (production) {
+    assertStrongSecret("ORIGIN_PROXY_SECRET", originSecret);
+    if (originSecret === accessTokenSecret || originSecret === attendanceQrSecret) {
+      throw new Error("ORIGIN_PROXY_SECRET must differ from the other secrets.");
+    }
+  }
+  const proxyHops = Number(environment.PROXY_HOPS ?? (production ? 2 : 0));
+  if (
+    !Number.isInteger(proxyHops) ||
+    proxyHops < 0 ||
+    proxyHops > 5 ||
+    (production && proxyHops === 0)
+  ) {
+    throw new Error("PROXY_HOPS must be an integer from 0 to 5, and at least 1 in production.");
+  }
 
   return {
     port,
@@ -115,6 +131,9 @@ export function loadRuntimeConfig(environment: NodeJS.ProcessEnv = process.env):
       refreshTokenExpiresInMs: 30 * 24 * 60 * 60 * 1000,
       webOrigin,
       cookieSecure: production,
+      originSecret,
+      proxyHops,
+      proxyDiagnostics: readBoolean("PROXY_DIAGNOSTICS", environment.PROXY_DIAGNOSTICS, false),
     },
   };
 }

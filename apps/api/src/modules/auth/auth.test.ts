@@ -127,19 +127,68 @@ describe("authentication API", () => {
   });
 
   it("uses a secure, same-site refresh cookie when production security is enabled", async () => {
-    const productionApp = createApp({ ...config, cookieSecure: true }, repository);
-    const response = await request(productionApp).post("/api/v1/auth/register").send({
-      name: "Production Cookie Student",
-      email: "production-cookie@example.test",
-      password: "A-long-demo-password-123",
-    });
+    const originSecret = "origin-proxy-test-secret-longer-than-thirty-two-characters";
+    const productionApp = createApp(
+      { ...config, cookieSecure: true, originSecret, proxyHops: 2 },
+      repository,
+    );
+    await request(productionApp).post("/api/v1/auth/login").expect(403);
+    await request(productionApp).get("/api/v1/health").expect(200);
+    await request(productionApp).get("/api/docs").set("x-origin-secret", originSecret).expect(404);
+    const response = await request(productionApp)
+      .post("/api/v1/auth/register")
+      .set("x-origin-secret", originSecret)
+      .send({
+        name: "Production Cookie Student",
+        email: "production-cookie@example.test",
+        password: "A-long-demo-password-123",
+      });
 
     expect(response.status).toBe(201);
     expect(response.headers["set-cookie"][0]).toContain("HttpOnly");
     expect(response.headers["set-cookie"][0]).toContain("Secure");
     expect(response.headers["set-cookie"][0]).toContain("SameSite=Lax");
     expect(response.headers["set-cookie"][0]).not.toContain("SameSite=None");
-    expect(productionApp.get("trust proxy")).toBe(1);
+    expect(productionApp.get("trust proxy")).toBe(2);
+  });
+
+  it("isolates login limits by forwarded client IP only after authenticating the proxy", async () => {
+    const originSecret = "origin-proxy-test-secret-longer-than-thirty-two-characters";
+    const productionApp = createApp(
+      { ...config, cookieSecure: true, originSecret, proxyHops: 2 },
+      repository,
+    );
+    const login = (client: string) =>
+      request(productionApp)
+        .post("/api/v1/auth/login")
+        .set("Origin", config.webOrigin)
+        .set("x-origin-secret", originSecret)
+        .set("X-Forwarded-For", `${client}, 198.51.100.10`)
+        .send({ email: "missing@example.test", password: "password" });
+    for (let attempt = 0; attempt < 20; attempt++) await login("192.0.2.1").expect(401);
+    await login("192.0.2.1").expect(429);
+    await login("192.0.2.2").expect(401);
+    await request(productionApp)
+      .post("/api/v1/auth/login")
+      .set("X-Forwarded-For", "192.0.2.3, 198.51.100.10")
+      .send({})
+      .expect(403);
+  });
+
+  it("only exposes opt-in proxy diagnostics behind the origin secret", async () => {
+    const originSecret = "origin-proxy-test-secret-longer-than-thirty-two-characters";
+    const productionApp = createApp(
+      { ...config, cookieSecure: true, originSecret, proxyHops: 2, proxyDiagnostics: true },
+      repository,
+    );
+    await request(productionApp).get("/api/v1/proxy-diagnostic").expect(403);
+    await request(productionApp)
+      .get("/api/v1/proxy-diagnostic")
+      .set("x-origin-secret", originSecret)
+      .set("X-Forwarded-For", "192.0.2.12, 198.51.100.10")
+      .expect(200)
+      .expect(({ body }) => expect(body.clientIp).toBe("192.0.2.12"));
+    await request(app).get("/api/v1/proxy-diagnostic").expect(404);
   });
 
   it("sets security headers and only grants CORS access to the configured web origin", async () => {

@@ -9,6 +9,7 @@ const validEnvironment = {
   ATTENDANCE_QR_SECRET: "a-valid-qr-secret-with-enough-distinct-characters-456",
   WEB_ORIGIN: "https://campushub.example",
   NODE_ENV: "production",
+  ORIGIN_PROXY_SECRET: "a-valid-origin-secret-with-enough-distinct-characters-789",
   ALLOW_LOCAL_STORAGE: "true",
 };
 
@@ -115,6 +116,20 @@ describe("runtime configuration", () => {
         accessTokenSecret: validEnvironment.JWT_ACCESS_SECRET,
         attendanceQrSecret: validEnvironment.ATTENDANCE_QR_SECRET,
       },
+    });
+  });
+
+  it("validates the origin secret, proxy hops and platform port", () => {
+    expect(() => loadRuntimeConfig({ ...validEnvironment, ORIGIN_PROXY_SECRET: "" })).toThrow(
+      /ORIGIN_PROXY_SECRET/,
+    );
+    expect(() => loadRuntimeConfig({ ...validEnvironment, PROXY_HOPS: "0" })).toThrow(/PROXY_HOPS/);
+    expect(() => loadRuntimeConfig({ ...validEnvironment, PORT: "invalid" })).toThrow(/port/i);
+    expect(
+      loadRuntimeConfig({ ...validEnvironment, PORT: "4567", API_PORT: "3000", PROXY_HOPS: "2" }),
+    ).toMatchObject({
+      port: 4567,
+      auth: { proxyHops: 2 },
     });
   });
 });

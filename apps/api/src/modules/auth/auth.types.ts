@@ -38,6 +38,9 @@ export interface AuthConfig {
   refreshTokenExpiresInMs: number;
   webOrigin: string;
   cookieSecure: boolean;
+  originSecret?: string;
+  proxyHops?: number;
+  proxyDiagnostics?: boolean;
 }
 
 export interface AuthSession {
