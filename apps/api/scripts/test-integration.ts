@@ -17,7 +17,7 @@ if (!parsedUrl.pathname.replace(/^\//, "").endsWith("_test")) {
   );
 }
 
-const environment = { ...process.env, DATABASE_URL: databaseUrl };
+const environment = { ...process.env, DATABASE_URL: databaseUrl, DIRECT_DATABASE_URL: databaseUrl };
 const prismaCli = resolve(process.cwd(), "../../node_modules/prisma/build/index.js");
 const vitestCli = resolve(process.cwd(), "../../node_modules/vitest/vitest.mjs");
 

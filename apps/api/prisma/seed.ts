@@ -3,12 +3,14 @@ import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { AttendanceStatus, NotificationType, PrismaClient, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { validateDemoDatabase } from "../src/shared/demo-database";
 
 dotenv.config({ path: resolve(__dirname, "../../../.env") });
 
 const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
+  if (process.env.NODE_ENV === "production") validateDemoDatabase(process.env);
   const demoPassword = process.env.DEMO_PASSWORD;
   if (!demoPassword || demoPassword.length < 12) {
     throw new Error(

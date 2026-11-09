@@ -11,7 +11,7 @@
     "dev": "npm run dev --workspace @campushub/api",
     "dev:web": "npm run dev --workspace @campushub/web",
     "build": "npm run build --workspace @campushub/api && npm run build --workspace @campushub/web",
-    "lint": "eslint apps/api/src apps/web/src playwright.config.ts eslint.config.mjs e2e",
+    "lint": "eslint apps/api/src apps/api/scripts apps/web/src playwright.config.ts eslint.config.mjs e2e",
     "format:check": "prettier --check \"apps/**/*.{ts,tsx,json}\" \"e2e/**/*.ts\" \"*.{json,js,mjs,ts}\" \".github/workflows/*.yml\"",
     "test:e2e": "playwright test",
     "test": "npm run test --workspace @campushub/api",
@@ -20,7 +20,10 @@
     "db:generate": "npm run db:generate --workspace @campushub/api",
     "db:migrate": "npm run db:migrate --workspace @campushub/api",
     "db:deploy": "npm run db:deploy --workspace @campushub/api",
-    "db:seed": "npm run db:seed --workspace @campushub/api"
+    "db:seed": "npm run db:seed --workspace @campushub/api",
+    "storage:smoke": "npm run storage:smoke --workspace @campushub/api",
+    "demo:seed": "npm run demo:seed --workspace @campushub/api",
+    "demo:reset": "npm run demo:reset --workspace @campushub/api"
   },
   "engines": {
     "node": ">=20.19"

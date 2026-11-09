@@ -8,6 +8,8 @@ CampusHub adalah proyek portofolio sistem informasi kampus yang menggabungkan LM
 
 Fase 1-6: fondasi monorepo, autentikasi/RBAC, pengelolaan kelas, enrollment dan materi, tugas, submission berversi, penilaian, absensi QR dinamis, dashboard analitik, pengumuman, notifikasi, dan ekspor CSV.
 
+Persiapan deploy Vercel + Render + Neon + S3 privat: lihat [panduan deployment](docs/DEPLOYMENT.md). Deployment, koneksi provider nyata, dan topologi IP proxy harus diverifikasi setelah konfigurasi akun secara manual.
+
 ## Tech stack
 
 - Frontend: React, TypeScript, Vite, Tailwind CSS, React Router, TanStack Query, React Hook Form, Zod, Recharts, qrcode.react, html5-qrcode

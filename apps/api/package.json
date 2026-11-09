@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json && tsc --noEmit -p tsconfig.seed.json && tsc --noEmit -p tsconfig.test.json",
+    "build": "tsc -p tsconfig.json && tsc --noEmit -p tsconfig.seed.json && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.scripts.json",
     "start": "node dist/index.js",
     "test": "npm run test:unit",
     "test:unit": "vitest run src --exclude '**/*.integration.test.ts'",
@@ -13,7 +13,10 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "storage:smoke": "tsx scripts/storage-smoke.ts",
+    "demo:seed": "tsx scripts/demo.ts seed",
+    "demo:reset": "tsx scripts/demo.ts reset"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1164.0",

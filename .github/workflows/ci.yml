@@ -58,6 +58,8 @@ jobs:
 
       - name: PostgreSQL integration tests
         run: npm run test:integration
+        env:
+          DIRECT_DATABASE_URL: postgresql://unused:unused@127.0.0.1:1/not_the_test_database
 
       - name: Start S3 HTTP test server
         env:
@@ -73,6 +75,17 @@ jobs:
 
       - name: PostgreSQL integration tests with S3 storage
         run: npm run test:integration
+        env:
+          STORAGE_DRIVER: s3
+          S3_ENDPOINT: http://127.0.0.1:9000
+          S3_REGION: us-east-1
+          S3_BUCKET: campushub-test
+          S3_ACCESS_KEY_ID: campushub-test-user
+          S3_SECRET_ACCESS_KEY: campushub-test-password
+          S3_FORCE_PATH_STYLE: "true"
+
+      - name: Smoke test against S3 HTTP test server
+        run: npm run storage:smoke
         env:
           STORAGE_DRIVER: s3
           S3_ENDPOINT: http://127.0.0.1:9000
