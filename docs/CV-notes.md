@@ -1,6 +1,6 @@
 # Catatan portofolio dan interview
 
-Gunakan sebagai bahan yang dapat dijelaskan sendiri; sesuaikan dengan pekerjaan yang benar-benar kamu lakukan dan jangan mengklaim deployment/provider sudah terverifikasi sebelum diuji.
+Gunakan sebagai bahan yang dapat dijelaskan sendiri; sesuaikan setiap pernyataan dengan kontribusimu yang sebenarnya, termasuk penggunaan bantuan AI. Jangan mengklaim deployment/provider sudah terverifikasi sebelum diuji.
 
 ## Bullet CV — Bahasa Indonesia
 
@@ -27,7 +27,7 @@ CampusHub adalah LMS sederhana dan sistem absensi QR berbasis React, Express, da
 ## Pertanyaan interview dan jawaban singkat
 
 1. **Mengapa QR berotasi?** Token JWT terikat sesi dan slot 30 detik yang diperiksa dengan waktu server, sehingga token lama cepat kedaluwarsa; ini tidak membuktikan lokasi fisik mahasiswa. Lihat [attendance-token.ts](../apps/api/src/modules/attendance/attendance-token.ts).
-2. **Mengapa `X-Forwarded-For` tidak langsung dipercaya?** Klien bisa mengirim header palsu. Backend membatasi akses origin dengan secret yang disetel ulang proxy dan mengatur trust proxy; jumlah hop serta overwrite header masih wajib diverifikasi di production. Lihat [app.ts](../apps/api/src/app.ts) dan [panduan deployment](DEPLOYMENT.md).
+2. **Mengapa `X-Forwarded-For` tidak langsung dipercaya?** Klien bisa mengirim header palsu. Backend dirancang membatasi akses origin dengan secret yang disetel ulang proxy dan mengatur trust proxy; perilaku rewrite dan jumlah hop masih wajib diverifikasi di production. Lihat [app.ts](../apps/api/src/app.ts) dan [panduan deployment](DEPLOYMENT.md).
 3. **Bagaimana mencegah kelas melebihi kapasitas?** Transaksi mengunci baris kelas sebelum menghitung dan menambah enrollment; unique constraint juga menolak mahasiswa yang sama mendaftar dua kali. Lihat [class.repository.ts](../apps/api/src/modules/classes/class.repository.ts).
 4. **Bagaimana refresh token diamankan?** Token acak disimpan sebagai hash, dikirim melalui cookie `HttpOnly`, dan dirotasi pada refresh; token lama yang dipakai ulang ditolak. Lihat [auth.service.ts](../apps/api/src/modules/auth/auth.service.ts).
 5. **Mengapa perlu trigger nilai di database?** Validasi di aplikasi saja tidak melindungi perubahan lewat jalur database lain; trigger juga membatasi score terhadap maxScore dan perubahan maksimum terhadap nilai yang sudah ada. Lihat [migrasi tugas](../apps/api/prisma/migrations/20261109020000_assignments_and_grading/migration.sql).

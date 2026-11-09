@@ -23,21 +23,11 @@ Akun berikut dibuat oleh seed; ketersediaan pada demo online belum diverifikasi.
 
 ## Tampilan
 
-Screenshot diambil dari data demo lokal, bukan production. Teks “smoke test” pada beberapa gambar merupakan data pengujian.
-
-| Admin | Dosen |
-| --- | --- |
-| ![Dashboard admin](docs/screenshots/dashboard-admin.png) | ![Dashboard dosen](docs/screenshots/dashboard-lecturer.png) |
-
-| Mahasiswa | Absensi QR |
-| --- | --- |
-| ![Dashboard mahasiswa](docs/screenshots/dashboard-student.png) | ![Sesi absensi QR](docs/screenshots/attendance-session-notifications.png) |
-
-[Lihat notifikasi mahasiswa](docs/screenshots/notifications.png).
+Screenshot baru akan ditambahkan setelah aplikasi live dan data demo siap. Screenshot pengujian lokal lama tetap disimpan di direktori dokumentasi, tetapi tidak ditampilkan sebagai materi promosi.
 
 ## Fitur per role
 
-- **Admin:** kelola mata kuliah dan kelas/semester, lihat dashboard agregat, buat pengumuman, serta ekspor rekap nilai.
+- **Admin:** kelola mata kuliah dan kelas, lihat dashboard agregat, buat pengumuman, serta ekspor rekap nilai. Semester tersedia dari data database; belum ada fitur pengelolaan semester di UI/API.
 - **Dosen:** kelola materi kelas, tugas, penilaian dan feedback; buka sesi QR, pantau/ubah kehadiran dengan audit, ekspor rekap dan buat pengumuman kelas.
 - **Mahasiswa:** daftar kelas, unduh materi, kumpulkan tugas, lihat nilai/feedback dan notifikasi, serta check-in QR melalui kamera atau input manual.
 - **Bersama:** autentikasi dan proteksi per role, dashboard responsif, pengumuman, notifikasi in-app, serta loading/empty/error state.
@@ -152,7 +142,7 @@ Integration test menerapkan migrasi dan memodifikasi database yang ditunjuk `TES
 | Keamanan sesi | Access token berumur pendek; refresh token acak disimpan sebagai hash, dirotasi saat refresh, dan cookie `HttpOnly` memakai `Secure` di production. |
 | Nilai tidak boleh melampaui maksimum tugas | Validasi aplikasi didukung constraint dan trigger PostgreSQL pada submission serta perubahan maksimum tugas. |
 | CSV injection | Sel CSV di-escape dan nilai yang berpotensi menjadi formula spreadsheet dinetralkan. |
-| Satu origin dan proxy | Browser memakai `/api` relatif dan cookie `SameSite=Lax`; rewrite Vercel menyetel header origin rahasia yang divalidasi backend. `PROXY_HOPS=2` masih hipotesis dan harus diuji di deployment. |
+| Satu origin dan proxy | Browser memakai `/api` relatif dan cookie `SameSite=Lax`; konfigurasi rewrite Vercel dirancang menyetel header origin rahasia yang divalidasi backend. Rewrite dan `PROXY_HOPS=2` masih harus diuji di deployment. |
 | Penyimpanan file | Interface `FileStorage` memisahkan disk lokal dan S3; key acak serta streaming setelah otorisasi menghindari URL publik permanen. Bucket harus dibuat privat oleh operator. |
 
 ## Known issues dan batasan
@@ -160,7 +150,7 @@ Integration test menerapkan migrasi dan memodifikasi database yang ditunjuk `TES
 - Audit terdahulu melaporkan tiga temuan high pada dependency Prisma 6 / `deepmerge-ts` ([GHSA-ggr8-5vv4-36mx](https://github.com/advisories/GHSA-ggr8-5vv4-36mx)) dan tujuh moderate pada tooling `minimatch` ([GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)). Ini **snapshot audit sebelumnya**, bukan hasil audit terkini; jalankan `npm audit` dan tinjau perbaikan serta kompatibilitas sebelum rilis publik.
 - Server S3 mock CI tidak memverifikasi signature kriptografis dan bukan pengganti smoke test terhadap provider sungguhan. Neon, provider S3, serta scan kamera HP via HTTPS belum diverifikasi di production.
 - Rate limit menggunakan memori per instance; bukan pembatas terdistribusi. Jumlah proxy hop dan identitas IP klien harus diuji pada topologi deployment sebenarnya.
-- Screenshot menampilkan data demo dan sebagian berlabel smoke test; gambar grafik dosen memiliki label sumbu yang rapat. Penggantian screenshot dengan data demo yang lebih rapi direncanakan.
+- Screenshot pengujian lokal sebagian berlabel smoke test dan grafik dosen memiliki label sumbu yang rapat; screenshot baru direncanakan setelah deployment.
 
 ## Roadmap
 
