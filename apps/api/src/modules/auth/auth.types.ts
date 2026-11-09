@@ -33,6 +33,7 @@ export interface AuthRepository {
 
 export interface AuthConfig {
   accessTokenSecret: string;
+  attendanceQrSecret: string;
   accessTokenExpiresInSeconds: number;
   refreshTokenExpiresInMs: number;
   webOrigin: string;

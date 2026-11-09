@@ -26,6 +26,14 @@ import { MaterialService } from "./modules/materials/material.service";
 import { MaterialController } from "./modules/materials/material.controller";
 import { LocalFileStorage } from "./modules/materials/local-file.storage";
 import type { FileStorage } from "./modules/materials/file-storage";
+import { PrismaAssignmentRepository } from "./modules/assignments/assignment.repository";
+import { AssignmentService } from "./modules/assignments/assignment.service";
+import { AssignmentController } from "./modules/assignments/assignment.controller";
+import { createAssignmentRouter } from "./modules/assignments/assignment.routes";
+import { PrismaAttendanceRepository } from "./modules/attendance/attendance.repository";
+import { AttendanceService } from "./modules/attendance/attendance.service";
+import { AttendanceController } from "./modules/attendance/attendance.controller";
+import { createAttendanceRouter } from "./modules/attendance/attendance.routes";
 
 export function createApp(
   config: AuthConfig,
@@ -47,6 +55,14 @@ export function createApp(
   const materialRepository = new PrismaMaterialRepository(database);
   const materialController = new MaterialController(
     new MaterialService(materialRepository, fileStorage),
+  );
+  const assignmentRepository = new PrismaAssignmentRepository(database);
+  const assignmentController = new AssignmentController(
+    new AssignmentService(assignmentRepository, fileStorage),
+  );
+  const attendanceRepository = new PrismaAttendanceRepository(database);
+  const attendanceController = new AttendanceController(
+    new AttendanceService(attendanceRepository, config.attendanceQrSecret),
   );
 
   app.disable("x-powered-by");
@@ -78,6 +94,8 @@ export function createApp(
   app.use("/api/v1/classes", createClassRouter(classController, config.accessTokenSecret));
   app.use("/api/v1/classes/:classId/materials", createClassMaterialsRouter(materialController, config.accessTokenSecret));
   app.use("/api/v1/materials", createMaterialRouter(materialController, config.accessTokenSecret));
+  app.use("/api/v1", createAssignmentRouter(assignmentController, config.accessTokenSecret));
+  app.use("/api/v1", createAttendanceRouter(attendanceController, config.accessTokenSecret));
   app.use(notFoundHandler);
   app.use(errorHandler);
 

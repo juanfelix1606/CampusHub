@@ -43,17 +43,19 @@ async function main(): Promise<void> {
     env: environment,
   });
   execFileSync(
-  process.execPath,
-  [
-    vitestCli,
-    "run",
-    "src/modules/auth/auth.integration.test.ts",
-    "src/modules/classes/classes.integration.test.ts",
-  ],
-  {
+    process.execPath,
+    [
+      vitestCli,
+      "run",
+      "src/modules/auth/auth.integration.test.ts",
+      "src/modules/classes/classes.integration.test.ts",
+      "src/modules/assignments/assignments.integration.test.ts",
+      "src/modules/attendance/attendance.integration.test.ts",
+    ],
+    {
       stdio: "inherit",
       env: environment,
-  },
+    },
   );
 }
 

@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
-import { PrismaClient, UserRole } from "@prisma/client";
+import { AttendanceStatus, PrismaClient, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 dotenv.config({ path: resolve(__dirname, "../../../.env") });
@@ -77,6 +78,47 @@ async function main(): Promise<void> {
     },
   });
 
+  const assignmentOne = await prisma.assignment.upsert({
+    where: { id: "00000000-0000-4000-8000-000000000401" },
+    update: {
+      sectionId: section.id,
+      title: "Rancangan kebutuhan sistem",
+      description: "Susun kebutuhan fungsional dan nonfungsional untuk studi kasus.",
+      deadline: new Date("2026-11-20T16:00:00.000Z"),
+      maxScore: 100,
+      allowLate: false,
+    },
+    create: {
+      id: "00000000-0000-4000-8000-000000000401",
+      sectionId: section.id,
+      title: "Rancangan kebutuhan sistem",
+      description: "Susun kebutuhan fungsional dan nonfungsional untuk studi kasus.",
+      deadline: new Date("2026-11-20T16:00:00.000Z"),
+      maxScore: 100,
+      allowLate: false,
+    },
+  });
+  const assignmentTwo = await prisma.assignment.upsert({
+    where: { id: "00000000-0000-4000-8000-000000000402" },
+    update: {
+      sectionId: section.id,
+      title: "Diagram arsitektur",
+      description: "Buat diagram arsitektur dan jelaskan keputusan desain.",
+      deadline: new Date("2026-11-05T16:00:00.000Z"),
+      maxScore: 50,
+      allowLate: true,
+    },
+    create: {
+      id: "00000000-0000-4000-8000-000000000402",
+      sectionId: section.id,
+      title: "Diagram arsitektur",
+      description: "Buat diagram arsitektur dan jelaskan keputusan desain.",
+      deadline: new Date("2026-11-05T16:00:00.000Z"),
+      maxScore: 50,
+      allowLate: true,
+    },
+  });
+
   await Promise.all(
     students.map((student) =>
       prisma.enrollment.upsert({
@@ -86,6 +128,185 @@ async function main(): Promise<void> {
       }),
     ),
   );
+
+  const gradedSubmission = await prisma.submission.upsert({
+    where: {
+      assignmentId_studentId: {
+        assignmentId: assignmentOne.id,
+        studentId: students[0].id,
+      },
+    },
+    update: {
+      textContent: "Demo: kebutuhan aktor mahasiswa, dosen, dan admin beserta batasan performa.",
+      score: 88,
+      feedback: "Kebutuhan sudah jelas; tambahkan prioritas untuk kebutuhan nonfungsional.",
+      gradedAt: new Date("2026-11-08T10:00:00.000Z"),
+      submittedAt: new Date("2026-11-07T10:00:00.000Z"),
+      isLate: false,
+      version: 1,
+    },
+    create: {
+      assignmentId: assignmentOne.id,
+      studentId: students[0].id,
+      textContent: "Demo: kebutuhan aktor mahasiswa, dosen, dan admin beserta batasan performa.",
+      score: 88,
+      feedback: "Kebutuhan sudah jelas; tambahkan prioritas untuk kebutuhan nonfungsional.",
+      gradedAt: new Date("2026-11-08T10:00:00.000Z"),
+      submittedAt: new Date("2026-11-07T10:00:00.000Z"),
+      isLate: false,
+      version: 1,
+    },
+  });
+  await prisma.submissionVersion.upsert({
+    where: { submissionId_version: { submissionId: gradedSubmission.id, version: 1 } },
+    update: {
+      textContent: gradedSubmission.textContent,
+      submittedAt: gradedSubmission.submittedAt,
+      isLate: false,
+    },
+    create: {
+      submissionId: gradedSubmission.id,
+      version: 1,
+      textContent: gradedSubmission.textContent,
+      submittedAt: gradedSubmission.submittedAt,
+      isLate: false,
+    },
+  });
+  await prisma.gradeAudit.upsert({
+    where: { id: "00000000-0000-4000-8000-000000000501" },
+    update: {
+      submissionId: gradedSubmission.id,
+      graderId: lecturer.id,
+      score: 88,
+      feedback: gradedSubmission.feedback,
+      gradedAt: gradedSubmission.gradedAt ?? new Date(),
+    },
+    create: {
+      id: "00000000-0000-4000-8000-000000000501",
+      submissionId: gradedSubmission.id,
+      graderId: lecturer.id,
+      score: 88,
+      feedback: gradedSubmission.feedback,
+      gradedAt: gradedSubmission.gradedAt ?? new Date(),
+    },
+  });
+
+  const lateSubmission = await prisma.submission.upsert({
+    where: {
+      assignmentId_studentId: {
+        assignmentId: assignmentTwo.id,
+        studentId: students[1].id,
+      },
+    },
+    update: {
+      textContent: "Demo: diagram komponen dan uraian komunikasi antar layanan.",
+      submittedAt: new Date("2026-11-07T09:00:00.000Z"),
+      isLate: true,
+      version: 1,
+      score: null,
+      feedback: null,
+      gradedAt: null,
+    },
+    create: {
+      assignmentId: assignmentTwo.id,
+      studentId: students[1].id,
+      textContent: "Demo: diagram komponen dan uraian komunikasi antar layanan.",
+      submittedAt: new Date("2026-11-07T09:00:00.000Z"),
+      isLate: true,
+      version: 1,
+    },
+  });
+  await prisma.submissionVersion.upsert({
+    where: { submissionId_version: { submissionId: lateSubmission.id, version: 1 } },
+    update: {
+      textContent: lateSubmission.textContent,
+      submittedAt: lateSubmission.submittedAt,
+      isLate: true,
+    },
+    create: {
+      submissionId: lateSubmission.id,
+      version: 1,
+      textContent: lateSubmission.textContent,
+      submittedAt: lateSubmission.submittedAt,
+      isLate: true,
+    },
+  });
+
+  const attendanceSessions = [
+    { id: "00000000-0000-4000-8000-000000000601", title: "Pertemuan 1 - Pengantar RPL", daysAgo: 21 },
+    { id: "00000000-0000-4000-8000-000000000602", title: "Pertemuan 2 - Analisis Kebutuhan", daysAgo: 14 },
+    { id: "00000000-0000-4000-8000-000000000603", title: "Pertemuan 3 - Pemodelan Sistem", daysAgo: 7 },
+  ];
+  const attendanceBySession = [
+    [AttendanceStatus.PRESENT, AttendanceStatus.LATE],
+    [AttendanceStatus.PRESENT, AttendanceStatus.EXCUSED],
+    [AttendanceStatus.ABSENT, AttendanceStatus.SICK],
+  ];
+  const attendanceRecords = [];
+  for (const [index, item] of attendanceSessions.entries()) {
+    const createdAt = new Date(Date.now() - item.daysAgo * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(createdAt.getTime() + 60 * 60 * 1000);
+    const session = await prisma.attendanceSession.upsert({
+      where: { id: item.id },
+      update: {
+        sectionId: section.id,
+        lecturerId: lecturer.id,
+        title: item.title,
+        lateAfterMinutes: 10,
+        tokenHash: createHash("sha256").update(item.id).digest("hex"),
+        createdAt,
+        expiresAt,
+        closedAt: expiresAt,
+      },
+      create: {
+        id: item.id,
+        sectionId: section.id,
+        lecturerId: lecturer.id,
+        title: item.title,
+        lateAfterMinutes: 10,
+        tokenHash: createHash("sha256").update(item.id).digest("hex"),
+        createdAt,
+        expiresAt,
+        closedAt: expiresAt,
+      },
+    });
+    for (const [studentIndex, student] of students.entries()) {
+      const status = attendanceBySession[index][studentIndex];
+      const checkedInAt =
+        status === AttendanceStatus.PRESENT || status === AttendanceStatus.LATE
+          ? new Date(createdAt.getTime() + (status === AttendanceStatus.LATE ? 16 : 5) * 60_000)
+          : null;
+      const attendance = await prisma.attendance.upsert({
+        where: { sessionId_studentId: { sessionId: session.id, studentId: student.id } },
+        update: { status, checkedInAt },
+        create: { sessionId: session.id, studentId: student.id, status, checkedInAt },
+      });
+      attendanceRecords.push({ attendance, studentIndex, sessionIndex: index });
+    }
+  }
+  const overriddenRecord = attendanceRecords.find(
+    (record) => record.sessionIndex === 1 && record.studentIndex === 1,
+  );
+  if (overriddenRecord) {
+    await prisma.attendanceAudit.upsert({
+      where: { id: "00000000-0000-4000-8000-000000000604" },
+      update: {
+        attendanceId: overriddenRecord.attendance.id,
+        changedById: lecturer.id,
+        previousStatus: AttendanceStatus.LATE,
+        status: AttendanceStatus.EXCUSED,
+        reason: "Izin disetujui dosen",
+      },
+      create: {
+        id: "00000000-0000-4000-8000-000000000604",
+        attendanceId: overriddenRecord.attendance.id,
+        changedById: lecturer.id,
+        previousStatus: AttendanceStatus.LATE,
+        status: AttendanceStatus.EXCUSED,
+        reason: "Izin disetujui dosen",
+      },
+    });
+  }
 
   console.info(
     `Seed complete: ${admin.email}, ${lecturer.email}, ${students.map((student) => student.email).join(", ")}`,

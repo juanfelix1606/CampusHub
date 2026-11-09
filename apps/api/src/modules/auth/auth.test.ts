@@ -10,6 +10,7 @@ import type { AuthRepository, AuthUser, StoredRefreshToken } from "./auth.types"
 
 const config = {
   accessTokenSecret: "test-only-signing-secret-that-is-at-least-32-chars",
+  attendanceQrSecret: "test-only-attendance-qr-secret-at-least-32-chars",
   accessTokenExpiresInSeconds: 900,
   refreshTokenExpiresInMs: 60_000,
   webOrigin: "http://localhost:5173",

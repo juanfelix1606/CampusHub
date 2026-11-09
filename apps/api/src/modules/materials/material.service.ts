@@ -1,53 +1,20 @@
 import { randomUUID } from "node:crypto";
-import { basename, extname } from "node:path";
+import { basename } from "node:path";
 import { Prisma } from "@prisma/client";
 import {
-  BadRequestError,
   ConflictError,
   NotFoundError,
-  PayloadTooLargeError,
 } from "../../shared/errors";
 import { paginated } from "../../shared/pagination";
 import type { UserRole } from "@prisma/client";
 import type { FileStorage } from "./file-storage";
 import type { MaterialFields, MaterialUpdate } from "./material.schemas";
+import { validateMaterialFile, type UploadedMaterialFile } from "./material-upload";
 import { PrismaMaterialRepository } from "./material.repository";
 import { assertLecturerOwnsClass, assertStudentEnrolled } from "./resource-access";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const allowedTypes = new Map([
-  [".pdf", "application/pdf"],
-  [".png", "image/png"],
-  [".jpg", "image/jpeg"],
-  [".jpeg", "image/jpeg"],
-]);
-
-export interface UploadedMaterialFile {
-  buffer: Buffer;
-  originalname: string;
-  mimetype: string;
-  size: number;
-}
-
-export function validateMaterialFile(file: UploadedMaterialFile): { extension: string; mimeType: string } {
-  if (file.size > MAX_FILE_SIZE) throw new PayloadTooLargeError("Material files must be 10 MB or smaller.");
-  const extension = extname(file.originalname).toLowerCase();
-  const mimeType = allowedTypes.get(extension);
-  if (!mimeType || file.mimetype !== mimeType) {
-    throw new BadRequestError("Only PDF, PNG, and JPEG files with matching extensions and MIME types are allowed.");
-  }
-  const validSignature =
-    (extension === ".pdf" && file.buffer.subarray(0, 5).toString() === "%PDF-") ||
-    (extension === ".png" &&
-      file.buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) ||
-    ((extension === ".jpg" || extension === ".jpeg") &&
-      file.buffer.length >= 3 &&
-      file.buffer[0] === 0xff &&
-      file.buffer[1] === 0xd8 &&
-      file.buffer[2] === 0xff);
-  if (!validSignature) throw new BadRequestError("File content does not match its declared type.");
-  return { extension: extension === ".jpeg" ? ".jpg" : extension, mimeType };
-}
+export { validateMaterialFile } from "./material-upload";
+export type { UploadedMaterialFile } from "./material-upload";
 
 export class MaterialService {
   constructor(

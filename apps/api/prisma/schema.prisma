@@ -13,6 +13,14 @@ enum UserRole {
   STUDENT
 }
 
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  EXCUSED
+  SICK
+  ABSENT
+}
+
 model User {
   id                    String              @id @default(uuid()) @db.Uuid
   name                  String
@@ -26,8 +34,10 @@ model User {
   enrollments           Enrollment[]
   materialsCreated      Material[]          @relation("MaterialAuthor")
   submissions           Submission[]
+  gradeAudits           GradeAudit[]         @relation("GradeAuditor")
   attendanceSessions    AttendanceSession[] @relation("AttendanceSessionLecturer")
   attendances           Attendance[]
+  attendanceAudits      AttendanceAudit[]   @relation("AttendanceAuditor")
   announcementsAuthored Announcement[]      @relation("AnnouncementAuthor")
   notifications         Notification[]
 }
@@ -120,62 +130,123 @@ model Material {
 }
 
 model Assignment {
-  id          String       @id @default(uuid()) @db.Uuid
-  sectionId   String       @db.Uuid
-  title       String
-  description String?
-  deadline    DateTime
-  maxScore    Int          @default(100)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  section     ClassSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  submissions Submission[]
+  id                    String       @id @default(uuid()) @db.Uuid
+  sectionId             String       @db.Uuid
+  title                 String
+  description           String?
+  deadline              DateTime
+  maxScore              Int          @default(100)
+  allowLate             Boolean      @default(false)
+  attachmentKey         String?
+  attachmentFileName    String?
+  attachmentContentType String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  section               ClassSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  submissions           Submission[]
 
   @@index([sectionId, deadline])
 }
 
 model Submission {
-  id           String     @id @default(uuid()) @db.Uuid
-  assignmentId String     @db.Uuid
-  studentId    String     @db.Uuid
-  fileKey      String
-  fileName     String
-  submittedAt  DateTime   @default(now())
-  score        Decimal?   @db.Decimal(5, 2)
+  id           String              @id @default(uuid()) @db.Uuid
+  assignmentId String              @db.Uuid
+  studentId    String              @db.Uuid
+  textContent  String?             @db.Text
+  fileKey      String?
+  fileName     String?
+  contentType  String?
+  submittedAt  DateTime            @default(now())
+  isLate       Boolean             @default(false)
+  version      Int                 @default(1)
+  score        Decimal?            @db.Decimal(6, 2)
   feedback     String?
   gradedAt     DateTime?
-  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignment   Assignment          @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      User                @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  versions     SubmissionVersion[]
+  gradeAudits  GradeAudit[]
 
   @@unique([assignmentId, studentId])
   @@index([studentId, submittedAt])
 }
 
+model SubmissionVersion {
+  id           String     @id @default(uuid()) @db.Uuid
+  submissionId String     @db.Uuid
+  version      Int
+  textContent  String?    @db.Text
+  fileKey      String?
+  fileName     String?
+  contentType  String?
+  submittedAt  DateTime   @default(now())
+  isLate       Boolean    @default(false)
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, version])
+  @@index([submissionId, submittedAt])
+}
+
+model GradeAudit {
+  id              String     @id @default(uuid()) @db.Uuid
+  submissionId    String     @db.Uuid
+  graderId         String     @db.Uuid
+  previousScore    Decimal?   @db.Decimal(6, 2)
+  score            Decimal    @db.Decimal(6, 2)
+  previousFeedback String?    @db.Text
+  feedback         String?    @db.Text
+  gradedAt         DateTime   @default(now())
+  submission       Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  grader           User       @relation("GradeAuditor", fields: [graderId], references: [id], onDelete: Restrict)
+
+  @@index([submissionId, gradedAt])
+}
+
 model AttendanceSession {
-  id          String       @id @default(uuid()) @db.Uuid
-  sectionId   String       @db.Uuid
-  lecturerId  String       @db.Uuid
-  tokenHash   String       @unique
-  expiresAt   DateTime
-  closedAt    DateTime?
-  createdAt   DateTime     @default(now())
-  section     ClassSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  lecturer    User         @relation("AttendanceSessionLecturer", fields: [lecturerId], references: [id], onDelete: Restrict)
-  attendances Attendance[]
+  id               String       @id @default(uuid()) @db.Uuid
+  sectionId        String       @db.Uuid
+  lecturerId       String       @db.Uuid
+  title            String
+  lateAfterMinutes Int          @default(10)
+  tokenHash        String       @unique
+  expiresAt        DateTime
+  closedAt         DateTime?
+  createdAt        DateTime     @default(now())
+  section          ClassSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  lecturer         User         @relation("AttendanceSessionLecturer", fields: [lecturerId], references: [id], onDelete: Restrict)
+  attendances      Attendance[]
 
   @@index([sectionId, createdAt])
+  @@index([sectionId, closedAt, expiresAt])
 }
 
 model Attendance {
-  id          String            @id @default(uuid()) @db.Uuid
-  sessionId   String            @db.Uuid
-  studentId   String            @db.Uuid
-  checkedInAt DateTime          @default(now())
+  id          String           @id @default(uuid()) @db.Uuid
+  sessionId   String           @db.Uuid
+  studentId   String           @db.Uuid
+  checkedInAt DateTime?
+  status      AttendanceStatus @default(PRESENT)
   session     AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  student     User              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student     User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  audits      AttendanceAudit[]
 
   @@unique([sessionId, studentId])
   @@index([studentId, checkedInAt])
+  @@index([sessionId, status])
+}
+
+model AttendanceAudit {
+  id          String           @id @default(uuid()) @db.Uuid
+  attendanceId String          @db.Uuid
+  changedById String           @db.Uuid
+  previousStatus AttendanceStatus?
+  status      AttendanceStatus
+  reason      String?          @db.VarChar(500)
+  changedAt   DateTime         @default(now())
+  attendance  Attendance       @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  changedBy   User             @relation("AttendanceAuditor", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([attendanceId, changedAt])
 }
 
 model Announcement {

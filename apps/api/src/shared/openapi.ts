@@ -2,8 +2,8 @@ export const openApiDocument = {
   openapi: "3.0.3",
   info: {
     title: "CampusHub API",
-    version: "0.3.0",
-    description: "API autentikasi, katalog mata kuliah, kelas, enrollment, dan materi CampusHub.",
+    version: "0.4.0",
+    description: "API autentikasi, kelas, materi, tugas, penilaian, dan absensi QR CampusHub.",
   },
   servers: [{ url: "/api/v1" }],
   components: {
@@ -276,6 +276,311 @@ export const openApiDocument = {
         security: [{ bearerAuth: [] }],
         parameters: [{ in: "path", name: "materialId", required: true, schema: { type: "string", format: "uuid" } }],
         responses: { "200": { description: "File materi." }, "403": { description: "Tidak memiliki akses." } },
+      },
+    },
+    "/classes/{classId}/assignments": {
+      post: {
+        summary: "Buat tugas pada kelas yang diampu dosen",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "classId", required: true, schema: { type: "string", format: "uuid" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                required: ["title", "deadline"],
+                properties: {
+                  title: { type: "string", maxLength: 160 },
+                  description: { type: "string", maxLength: 5000 },
+                  deadline: { type: "string", format: "date-time" },
+                  maxScore: { type: "integer", minimum: 1, maximum: 1000, default: 100 },
+                  allowLate: { type: "boolean", default: false },
+                  file: { type: "string", format: "binary", description: "Lampiran opsional PDF, PNG, atau JPEG; maksimal 10 MB." },
+                },
+              },
+            },
+          },
+        },
+        responses: { "201": { description: "Tugas dibuat." }, "403": { description: "Dosen bukan pengampu kelas." } },
+      },
+    },
+    "/assignments": {
+      get: {
+        summary: "Daftar tugas kelas yang diajar atau diikuti",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "query", name: "classId", schema: { type: "string", format: "uuid" } },
+          { in: "query", name: "status", schema: { type: "string", enum: ["NOT_SUBMITTED", "SUBMITTED", "LATE", "GRADED"] } },
+          { in: "query", name: "page", schema: { type: "integer", minimum: 1 } },
+          { in: "query", name: "pageSize", schema: { type: "integer", minimum: 1, maximum: 100 } },
+        ],
+        responses: { "200": { description: "Daftar tugas terpaginasikan beserta status mahasiswa." } },
+      },
+    },
+    "/assignments/{assignmentId}": {
+      get: {
+        summary: "Detail tugas (dosen pengampu atau mahasiswa terdaftar)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "assignmentId", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "200": { description: "Tugas." }, "403": { description: "Tidak memiliki akses." } },
+      },
+      patch: {
+        summary: "Ubah tugas atau lampiran (dosen pengampu)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "assignmentId", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "200": { description: "Tugas diperbarui." }, "409": { description: "Nilai maksimal lebih kecil dari nilai yang sudah diberikan." } },
+      },
+      delete: {
+        summary: "Hapus tugas beserta riwayat submission (dosen pengampu)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "assignmentId", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "204": { description: "Tugas dihapus." } },
+      },
+    },
+    "/assignments/{assignmentId}/submissions/me": {
+      get: {
+        summary: "Lihat submission sendiri beserta riwayat versi dan audit nilai",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "assignmentId", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "200": { description: "Submission pribadi atau null jika belum mengumpulkan." } },
+      },
+      post: {
+        summary: "Kirim atau kumpulkan ulang tugas sebelum deadline",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "assignmentId", required: true, schema: { type: "string", format: "uuid" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  textContent: { type: "string", maxLength: 20000 },
+                  file: { type: "string", format: "binary", description: "File opsional PDF, PNG, atau JPEG; wajib isi file atau teks." },
+                },
+              },
+            },
+          },
+        },
+        responses: { "201": { description: "Submission dibuat atau versinya diperbarui." }, "409": { description: "Deadline terlewati atau kebijakan menolak submission terlambat." } },
+      },
+    },
+    "/assignments/{assignmentId}/submissions": {
+      get: {
+        summary: "Daftar submission dan versi untuk tugas yang diajar",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "assignmentId", required: true, schema: { type: "string", format: "uuid" } },
+          { in: "query", name: "status", schema: { type: "string", enum: ["SUBMITTED", "LATE", "GRADED"] } },
+          { in: "query", name: "page", schema: { type: "integer", minimum: 1 } },
+          { in: "query", name: "pageSize", schema: { type: "integer", minimum: 1, maximum: 100 } },
+        ],
+        responses: { "200": { description: "Submission terpaginasikan." }, "403": { description: "Dosen bukan pengampu." } },
+      },
+    },
+    "/assignments/{assignmentId}/submissions/{submissionId}/grade": {
+      patch: {
+        summary: "Beri atau ubah nilai dan feedback (dosen pengampu)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "assignmentId", required: true, schema: { type: "string", format: "uuid" } },
+          { in: "path", name: "submissionId", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", required: ["score"], properties: { score: { type: "number", minimum: 0, maximum: 1000 }, feedback: { type: "string", maxLength: 5000 } } } } },
+        },
+        responses: { "200": { description: "Nilai disimpan dan audit dibuat." }, "400": { description: "Nilai di luar rentang tugas." } },
+      },
+    },
+    "/assignments/{assignmentId}/attachment": {
+      get: {
+        summary: "Download lampiran tugas dengan pemeriksaan akses kelas",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "assignmentId", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "200": { description: "File lampiran." }, "403": { description: "Tidak memiliki akses." } },
+      },
+    },
+    "/assignments/{assignmentId}/submissions/{submissionId}/file": {
+      get: {
+        summary: "Download file submission (mahasiswa pemilik atau dosen pengampu)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "assignmentId", required: true, schema: { type: "string", format: "uuid" } },
+          { in: "path", name: "submissionId", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: { "200": { description: "File submission." }, "403": { description: "Tidak memiliki akses." } },
+      },
+    },
+    "/assignments/{assignmentId}/submissions/{submissionId}/versions/{versionId}/file": {
+      get: {
+        summary: "Download versi historis submission dengan pemeriksaan pemilik atau dosen",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "assignmentId", required: true, schema: { type: "string", format: "uuid" } },
+          { in: "path", name: "submissionId", required: true, schema: { type: "string", format: "uuid" } },
+          { in: "path", name: "versionId", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: { "200": { description: "File versi submission." }, "403": { description: "Tidak memiliki akses." } },
+      },
+    },
+    "/classes/{classId}/grades/me": {
+      get: {
+        summary: "Ringkasan nilai mahasiswa pada kelas terdaftar",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "classId", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "200": { description: "Nilai per tugas dan agregat kelas." }, "403": { description: "Mahasiswa tidak terdaftar." } },
+      },
+    },
+    "/classes/{classId}/attendance/sessions": {
+      get: {
+        summary: "Daftar sesi absensi kelas yang diampu dosen",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "classId", required: true, schema: { type: "string", format: "uuid" } },
+          { in: "query", name: "page", schema: { type: "integer", minimum: 1 } },
+          { in: "query", name: "pageSize", schema: { type: "integer", minimum: 1, maximum: 100 } },
+        ],
+        responses: { "200": { description: "Riwayat sesi beserta rekap status." }, "403": { description: "Dosen bukan pengampu." } },
+      },
+      post: {
+        summary: "Buka sesi absensi (dosen pengampu)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "classId", required: true, schema: { type: "string", format: "uuid" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["title", "durationMinutes"],
+                properties: {
+                  title: { type: "string", minLength: 2, maxLength: 160 },
+                  durationMinutes: { type: "integer", minimum: 1, maximum: 240 },
+                  lateAfterMinutes: { type: "integer", minimum: 0, maximum: 240, default: 10 },
+                },
+              },
+            },
+          },
+        },
+        responses: { "201": { description: "Sesi dibuka." }, "403": { description: "Dosen bukan pengampu." }, "409": { description: "Sudah ada sesi aktif." } },
+      },
+    },
+    "/attendance/sessions/{sessionId}/qr": {
+      get: {
+        summary: "Ambil token QR aktif berumur maksimal 30 detik (dosen pengampu)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "sessionId", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "200": { description: "Token QR yang terikat ke sesi dan slot rotasi saat ini." }, "403": { description: "Dosen bukan pengampu." }, "409": { description: "Sesi ditutup atau kedaluwarsa." } },
+      },
+    },
+    "/attendance/sessions/{sessionId}/close": {
+      post: {
+        summary: "Tutup sesi absensi (dosen pengampu)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "sessionId", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "200": { description: "Sesi ditutup." }, "403": { description: "Dosen bukan pengampu." }, "409": { description: "Sesi sudah ditutup." } },
+      },
+    },
+    "/attendance/check-in": {
+      post: {
+        summary: "Check-in satu kali dengan token QR sesi yang masih berlaku (mahasiswa terdaftar)",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["sessionId", "token"],
+                properties: {
+                  sessionId: { type: "string", format: "uuid" },
+                  token: { type: "string", description: "JWT bertanda tangan server; hanya berlaku pada slot 30 detik saat ini." },
+                },
+              },
+            },
+          },
+        },
+        responses: { "201": { description: "Check-in tercatat dengan waktu server." }, "401": { description: "Token QR tidak valid atau kedaluwarsa." }, "403": { description: "Mahasiswa tidak terdaftar di kelas." }, "409": { description: "Sesi tidak aktif, token untuk sesi lain, atau sudah check-in." }, "429": { description: "Batas percobaan check-in tercapai." } },
+      },
+    },
+    "/attendance/me": {
+      get: {
+        summary: "Riwayat kehadiran mahasiswa sendiri",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "query", name: "classId", schema: { type: "string", format: "uuid" } },
+          { in: "query", name: "sessionId", schema: { type: "string", format: "uuid" } },
+          { in: "query", name: "status", schema: { type: "string", enum: ["PRESENT", "LATE", "EXCUSED", "SICK", "ABSENT"] } },
+          { in: "query", name: "page", schema: { type: "integer", minimum: 1 } },
+          { in: "query", name: "pageSize", schema: { type: "integer", minimum: 1, maximum: 100 } },
+        ],
+        responses: { "200": { description: "Riwayat sesi dan status mahasiswa yang sedang login." } },
+      },
+    },
+    "/classes/{classId}/attendance/me": {
+      get: {
+        summary: "Rekap persentase kehadiran mahasiswa pada kelas terdaftar",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "classId", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "200": { description: "Daftar sesi dan persentase kehadiran." }, "403": { description: "Mahasiswa tidak terdaftar." } },
+      },
+    },
+    "/attendance/sessions/{sessionId}/records": {
+      get: {
+        summary: "Daftar roster dan status sesi secara paginasi (dosen pengampu)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "sessionId", required: true, schema: { type: "string", format: "uuid" } },
+          { in: "query", name: "status", schema: { type: "string", enum: ["PRESENT", "LATE", "EXCUSED", "SICK", "ABSENT"] } },
+          { in: "query", name: "studentId", schema: { type: "string", format: "uuid" } },
+          { in: "query", name: "page", schema: { type: "integer", minimum: 1 } },
+          { in: "query", name: "pageSize", schema: { type: "integer", minimum: 1, maximum: 100 } },
+        ],
+        responses: { "200": { description: "Roster, audit perubahan status terbaru, dan hitungan seluruh roster." }, "403": { description: "Dosen bukan pengampu." } },
+      },
+    },
+    "/attendance/sessions/{sessionId}/records/{studentId}": {
+      patch: {
+        summary: "Ubah status kehadiran manual dengan audit (dosen pengampu)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "sessionId", required: true, schema: { type: "string", format: "uuid" } },
+          { in: "path", name: "studentId", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["status"],
+                properties: {
+                  status: { type: "string", enum: ["PRESENT", "LATE", "EXCUSED", "SICK", "ABSENT"] },
+                  reason: { type: "string", maxLength: 500 },
+                },
+              },
+            },
+          },
+        },
+        responses: { "200": { description: "Status diperbarui dan audit dicatat." }, "403": { description: "Dosen bukan pengampu." }, "404": { description: "Mahasiswa tidak terdaftar." } },
+      },
+    },
+    "/attendance/sessions/{sessionId}/export.csv": {
+      get: {
+        summary: "Ekspor roster satu sesi ke CSV yang aman dari formula injection (dosen pengampu)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "sessionId", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "200": { description: "CSV dengan UTF-8 BOM dan escaping formula." }, "403": { description: "Dosen bukan pengampu." } },
+      },
+    },
+    "/classes/{classId}/attendance/export.csv": {
+      get: {
+        summary: "Ekspor seluruh sesi dan roster kelas ke CSV (dosen pengampu)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "classId", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "200": { description: "CSV dengan UTF-8 BOM dan escaping formula." }, "403": { description: "Dosen bukan pengampu." } },
       },
     },
   },

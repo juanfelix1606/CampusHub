@@ -19,6 +19,7 @@ const marker = `classes-integration-${randomUUID()}`;
 const secret = "postgres-integration-test-secret-longer-than-32-characters";
 const config = {
   accessTokenSecret: secret,
+  attendanceQrSecret: "postgres-attendance-qr-secret-longer-than-32-characters",
   accessTokenExpiresInSeconds: 900,
   refreshTokenExpiresInMs: 60_000,
   webOrigin: "http://localhost:5173",

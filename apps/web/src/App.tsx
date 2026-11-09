@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from "./features/auth/AuthContext";
 import { ProtectedRoute } from "./features/auth/ProtectedRoute";
 import type { UserRole } from "./features/auth/auth.types";
 import { AdminCoursesPage, LecturerClassesPage, StudentClassesPage } from "./features/courses/CampusPages";
+import { LecturerAssignmentsPage, StudentAssignmentsPage } from "./features/assignments/AssignmentPages";
+import { LecturerAttendancePage, StudentAttendancePage } from "./features/attendance/AttendancePages";
 
 export default function App() {
   return (
@@ -21,9 +23,13 @@ export default function App() {
           </Route>
           <Route element={<ProtectedRoute roles={["LECTURER"]} />}>
             <Route path="/lecturer" element={<RolePage role="LECTURER" />} />
+            <Route path="/lecturer/assignments" element={<LecturerAssignmentsPage />} />
+            <Route path="/lecturer/attendance" element={<LecturerAttendancePage />} />
           </Route>
           <Route element={<ProtectedRoute roles={["STUDENT"]} />}>
             <Route path="/student" element={<RolePage role="STUDENT" />} />
+            <Route path="/student/assignments" element={<StudentAssignmentsPage />} />
+            <Route path="/student/attendance" element={<StudentAttendancePage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -95,9 +101,23 @@ function DashboardPage() {
           {user.role}
         </p>
         <div className="mt-6">
-          <Link className={secondaryLinkClass} to={rolePath[user.role]}>
-            Buka area {roleLabel[user.role]}
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link className={secondaryLinkClass} to={rolePath[user.role]}>
+              Buka area {roleLabel[user.role]}
+            </Link>
+            {user.role === "LECTURER" && (
+              <>
+                <Link className={secondaryLinkClass} to="/lecturer/assignments">Tugas & penilaian</Link>
+                <Link className={secondaryLinkClass} to="/lecturer/attendance">Absensi QR</Link>
+              </>
+            )}
+            {user.role === "STUDENT" && (
+              <>
+                <Link className={secondaryLinkClass} to="/student/assignments">Tugas saya</Link>
+                <Link className={secondaryLinkClass} to="/student/attendance">Absensi saya</Link>
+              </>
+            )}
+          </div>
         </div>
       </section>
     </main>

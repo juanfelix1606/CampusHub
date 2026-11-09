@@ -16,6 +16,7 @@ const marker = `auth-integration-${crypto.randomUUID()}`;
 const app = createApp(
   {
     accessTokenSecret: "postgres-integration-test-secret-longer-than-32-characters",
+    attendanceQrSecret: "postgres-attendance-qr-secret-longer-than-32-characters",
     accessTokenExpiresInSeconds: 900,
     refreshTokenExpiresInMs: 60_000,
     webOrigin: "http://localhost:5173",
