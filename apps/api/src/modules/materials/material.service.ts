@@ -1,10 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { basename } from "node:path";
 import { Prisma } from "@prisma/client";
-import {
-  ConflictError,
-  NotFoundError,
-} from "../../shared/errors";
+import { ConflictError, NotFoundError } from "../../shared/errors";
 import { paginated } from "../../shared/pagination";
 import type { UserRole } from "@prisma/client";
 import type { FileStorage } from "./file-storage";
@@ -22,7 +19,12 @@ export class MaterialService {
     private readonly storage: FileStorage,
   ) {}
 
-  async list(classId: string, user: { id: string; role: UserRole }, page: number, pageSize: number) {
+  async list(
+    classId: string,
+    user: { id: string; role: UserRole },
+    page: number,
+    pageSize: number,
+  ) {
     await this.assertCanViewClass(classId, user);
     const result = await this.repository.list(classId, page, pageSize);
     return paginated(result.items, result.total, page, pageSize);
@@ -144,5 +146,7 @@ export class MaterialService {
 }
 
 function safeOriginalName(originalName: string): string {
-  return basename(originalName).replace(/[^\w.-]/g, "_").slice(0, 180);
+  return basename(originalName)
+    .replace(/[^\w.-]/g, "_")
+    .slice(0, 180);
 }

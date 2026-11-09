@@ -20,9 +20,9 @@ describe("assignment deadline rules", () => {
   });
 
   it("accepts and marks late work only when the lecturer enabled the policy", () => {
-    expect(
-      getSubmissionLateStatus(deadline, true, false, new Date(deadline.getTime() + 1)),
-    ).toBe(true);
+    expect(getSubmissionLateStatus(deadline, true, false, new Date(deadline.getTime() + 1))).toBe(
+      true,
+    );
   });
 
   it("does not allow resubmission after the deadline, even when late work is enabled", () => {

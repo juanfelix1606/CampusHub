@@ -17,7 +17,10 @@ export class NotificationService {
 
   async list(userId: string, page: number, pageSize: number) {
     const result = await this.repository.list(userId, page, pageSize);
-    return { ...paginated(result.items, result.total, page, pageSize), unreadCount: result.unreadCount };
+    return {
+      ...paginated(result.items, result.total, page, pageSize),
+      unreadCount: result.unreadCount,
+    };
   }
 
   markRead(notificationId: string, userId: string) {
@@ -63,8 +66,13 @@ export class NotificationService {
   private async handleEvent(event: CampusHubEvent): Promise<void> {
     switch (event.type) {
       case "assignment.created":
-        await this.notifySection(event.sectionId, NotificationType.ASSIGNMENT, event.title,
-          "Tugas baru tersedia. Buka daftar tugas untuk melihat detail.", `/student/assignments`);
+        await this.notifySection(
+          event.sectionId,
+          NotificationType.ASSIGNMENT,
+          event.title,
+          "Tugas baru tersedia. Buka daftar tugas untuk melihat detail.",
+          `/student/assignments`,
+        );
         return;
       case "assignment.graded":
         await this.repository.createMany([event.studentId], {
@@ -75,8 +83,13 @@ export class NotificationService {
         });
         return;
       case "attendance.opened":
-        await this.notifySection(event.sectionId, NotificationType.ATTENDANCE, event.title,
-          "Sesi absensi dibuka. Segera lakukan check-in melalui QR.", `/student/attendance`);
+        await this.notifySection(
+          event.sectionId,
+          NotificationType.ATTENDANCE,
+          event.title,
+          "Sesi absensi dibuka. Segera lakukan check-in melalui QR.",
+          `/student/attendance`,
+        );
         return;
       case "announcement.created": {
         const recipients = event.sectionId

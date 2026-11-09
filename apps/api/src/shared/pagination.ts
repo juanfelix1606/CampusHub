@@ -16,7 +16,10 @@ export function paginated<T>(
   total: number,
   page: number,
   pageSize: number,
-): { items: T[]; pagination: { page: number; pageSize: number; total: number; totalPages: number } } {
+): {
+  items: T[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+} {
   return {
     items,
     pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },

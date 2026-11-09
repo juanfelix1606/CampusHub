@@ -15,7 +15,10 @@ export class AssignmentController {
 
   list = async (request: Request, response: Response): Promise<void> => {
     response.json({
-      data: await this.service.list(assignmentListQuerySchema.parse(request.query), request.authUser!),
+      data: await this.service.list(
+        assignmentListQuerySchema.parse(request.query),
+        request.authUser!,
+      ),
     });
   };
 
@@ -113,7 +116,10 @@ export class AssignmentController {
     );
     response
       .setHeader("Content-Type", "text/csv; charset=utf-8")
-      .setHeader("Content-Disposition", `attachment; filename="grades-class-${request.params.classId}.csv"`)
+      .setHeader(
+        "Content-Disposition",
+        `attachment; filename="grades-class-${request.params.classId}.csv"`,
+      )
       .setHeader("X-Content-Type-Options", "nosniff")
       .send(csv);
   };

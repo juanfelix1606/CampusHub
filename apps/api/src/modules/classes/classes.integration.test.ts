@@ -28,13 +28,17 @@ const config = {
 
 class MemoryFileStorage implements FileStorage {
   files = new Map<string, Buffer>();
-  async save(key: string, contents: Buffer) { this.files.set(key, Buffer.from(contents)); }
+  async save(key: string, contents: Buffer) {
+    this.files.set(key, Buffer.from(contents));
+  }
   async read(key: string) {
     const contents = this.files.get(key);
     if (!contents) throw new Error("File not found.");
     return Buffer.from(contents);
   }
-  async delete(key: string) { this.files.delete(key); }
+  async delete(key: string) {
+    this.files.delete(key);
+  }
 }
 
 const storage = new MemoryFileStorage();
@@ -68,12 +72,48 @@ beforeAll(async () => {
   const passwordHash = await bcrypt.hash("Integration-only-password-123", 4);
   await prisma.user.createMany({
     data: [
-      { id: ids.admin, name: "Test Admin", email: `${marker}-admin@test.local`, passwordHash, role: "ADMIN" },
-      { id: ids.lecturer, name: "Test Lecturer", email: `${marker}-lecturer@test.local`, passwordHash, role: "LECTURER" },
-      { id: ids.otherLecturer, name: "Other Lecturer", email: `${marker}-other-lecturer@test.local`, passwordHash, role: "LECTURER" },
-      { id: ids.student, name: "Test Student", email: `${marker}-student@test.local`, passwordHash, role: "STUDENT" },
-      { id: ids.otherStudent, name: "Other Student", email: `${marker}-other-student@test.local`, passwordHash, role: "STUDENT" },
-      { id: ids.thirdStudent, name: "Third Student", email: `${marker}-third-student@test.local`, passwordHash, role: "STUDENT" },
+      {
+        id: ids.admin,
+        name: "Test Admin",
+        email: `${marker}-admin@test.local`,
+        passwordHash,
+        role: "ADMIN",
+      },
+      {
+        id: ids.lecturer,
+        name: "Test Lecturer",
+        email: `${marker}-lecturer@test.local`,
+        passwordHash,
+        role: "LECTURER",
+      },
+      {
+        id: ids.otherLecturer,
+        name: "Other Lecturer",
+        email: `${marker}-other-lecturer@test.local`,
+        passwordHash,
+        role: "LECTURER",
+      },
+      {
+        id: ids.student,
+        name: "Test Student",
+        email: `${marker}-student@test.local`,
+        passwordHash,
+        role: "STUDENT",
+      },
+      {
+        id: ids.otherStudent,
+        name: "Other Student",
+        email: `${marker}-other-student@test.local`,
+        passwordHash,
+        role: "STUDENT",
+      },
+      {
+        id: ids.thirdStudent,
+        name: "Third Student",
+        email: `${marker}-third-student@test.local`,
+        passwordHash,
+        role: "STUDENT",
+      },
     ],
   });
   await prisma.semester.create({
@@ -85,7 +125,12 @@ beforeAll(async () => {
     },
   });
   await prisma.course.create({
-    data: { id: ids.course, code: `T${randomUUID().slice(0, 7).toUpperCase()}`, name: "Integration Course", credits: 3 },
+    data: {
+      id: ids.course,
+      code: `T${randomUUID().slice(0, 7).toUpperCase()}`,
+      name: "Integration Course",
+      credits: 3,
+    },
   });
   await prisma.classSection.create({
     data: {
@@ -100,7 +145,9 @@ beforeAll(async () => {
 }, 20_000);
 
 afterAll(async () => {
-  await prisma.classSection.deleteMany({ where: { id: { in: [ids.section, ids.concurrentSection] } } });
+  await prisma.classSection.deleteMany({
+    where: { id: { in: [ids.section, ids.concurrentSection] } },
+  });
   await prisma.course.deleteMany({ where: { id: ids.course } });
   await prisma.semester.deleteMany({ where: { id: ids.semester } });
   await prisma.user.deleteMany({ where: { email: { startsWith: marker } } });

@@ -12,7 +12,9 @@ export class CourseController {
   };
 
   getOne = async (request: Request, response: Response): Promise<void> => {
-    response.json({ data: { course: await this.service.getOne(uuidSchema.parse(request.params.courseId)) } });
+    response.json({
+      data: { course: await this.service.getOne(uuidSchema.parse(request.params.courseId)) },
+    });
   };
 
   create = async (request: Request, response: Response): Promise<void> => {
@@ -22,7 +24,9 @@ export class CourseController {
 
   update = async (request: Request, response: Response): Promise<void> => {
     const input = courseUpdateSchema.parse(request.body);
-    response.json({ data: { course: await this.service.update(uuidSchema.parse(request.params.courseId), input) } });
+    response.json({
+      data: { course: await this.service.update(uuidSchema.parse(request.params.courseId), input) },
+    });
   };
 
   delete = async (request: Request, response: Response): Promise<void> => {

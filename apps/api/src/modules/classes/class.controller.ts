@@ -28,7 +28,14 @@ export class ClassController {
   };
 
   getOne = async (request: Request, response: Response): Promise<void> => {
-    response.json({ data: { classSection: await this.service.getOne(uuidSchema.parse(request.params.classId), request.authUser!) } });
+    response.json({
+      data: {
+        classSection: await this.service.getOne(
+          uuidSchema.parse(request.params.classId),
+          request.authUser!,
+        ),
+      },
+    });
   };
 
   create = async (request: Request, response: Response): Promise<void> => {
@@ -39,7 +46,9 @@ export class ClassController {
   update = async (request: Request, response: Response): Promise<void> => {
     const input = classUpdateSchema.parse(request.body);
     response.json({
-      data: { classSection: await this.service.update(uuidSchema.parse(request.params.classId), input) },
+      data: {
+        classSection: await this.service.update(uuidSchema.parse(request.params.classId), input),
+      },
     });
   };
 

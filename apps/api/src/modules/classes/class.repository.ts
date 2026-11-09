@@ -24,7 +24,11 @@ export class PrismaClassRepository {
         : {}),
       ...(scope.role === "LECTURER" ? { lecturerId: scope.userId } : {}),
       ...(scope.role === "STUDENT"
-        ? { enrollments: scope.enrolled ? { some: { studentId: scope.userId } } : { none: { studentId: scope.userId } } }
+        ? {
+            enrollments: scope.enrolled
+              ? { some: { studentId: scope.userId } }
+              : { none: { studentId: scope.userId } },
+          }
         : {}),
     };
 
@@ -59,7 +63,10 @@ export class PrismaClassRepository {
   }
 
   findLecturer(lecturerId: string) {
-    return this.prisma.user.findFirst({ where: { id: lecturerId, role: "LECTURER" }, select: { id: true } });
+    return this.prisma.user.findFirst({
+      where: { id: lecturerId, role: "LECTURER" },
+      select: { id: true },
+    });
   }
 
   findById(id: string) {
@@ -114,9 +121,7 @@ export class PrismaClassRepository {
   }
 
   async canAccess(sectionId: string, studentId: string): Promise<boolean> {
-    return (
-      (await this.prisma.enrollment.count({ where: { sectionId, studentId } })) > 0
-    );
+    return (await this.prisma.enrollment.count({ where: { sectionId, studentId } })) > 0;
   }
 
   async enroll(sectionId: string, studentId: string): Promise<void> {

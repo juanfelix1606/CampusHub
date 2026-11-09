@@ -65,7 +65,10 @@ export class PrismaAnalyticsRepository {
       })),
     );
     const upcomingAssignments = assignments
-      .filter(({ deadline, submissions }) => deadline >= now && deadline <= addDays(now, 7) && submissions.length === 0)
+      .filter(
+        ({ deadline, submissions }) =>
+          deadline >= now && deadline <= addDays(now, 7) && submissions.length === 0,
+      )
       .sort((left, right) => left.deadline.getTime() - right.deadline.getTime())
       .slice(0, 10)
       .map(({ id, title, deadline, section }) => ({ id, title, deadline, section }));
@@ -75,27 +78,34 @@ export class PrismaAnalyticsRepository {
       .slice(0, 10)
       .map(({ id, title, deadline, section }) => ({ id, title, deadline, section }));
 
-    const gradeRows = assignments.flatMap(({ id, title, maxScore, section, submissions }) =>
-      submissions
-        .filter((submission) => submission.score !== null && submission.gradedAt)
-        .map((submission) => ({
-          assignmentId: id,
-          assignment: title,
-          sectionId: section.id,
-          courseCode: section.code,
-          score: Number(submission.score),
-          maxScore,
-          gradedAt: submission.gradedAt!,
-        })),
-    ).sort((left, right) => left.gradedAt.getTime() - right.gradedAt.getTime());
+    const gradeRows = assignments
+      .flatMap(({ id, title, maxScore, section, submissions }) =>
+        submissions
+          .filter((submission) => submission.score !== null && submission.gradedAt)
+          .map((submission) => ({
+            assignmentId: id,
+            assignment: title,
+            sectionId: section.id,
+            courseCode: section.code,
+            score: Number(submission.score),
+            maxScore,
+            gradedAt: submission.gradedAt!,
+          })),
+      )
+      .sort((left, right) => left.gradedAt.getTime() - right.gradedAt.getTime());
     const gradesByClass = attendanceByClass.map((classInfo) => {
       const grades = gradeRows.filter((grade) => grade.sectionId === classInfo.sectionId);
       return {
         sectionId: classInfo.sectionId,
         className: classInfo.className,
-        average: grades.length === 0
-          ? null
-          : Math.round((grades.reduce((sum, grade) => sum + (grade.score / grade.maxScore) * 100, 0) / grades.length) * 100) / 100,
+        average:
+          grades.length === 0
+            ? null
+            : Math.round(
+                (grades.reduce((sum, grade) => sum + (grade.score / grade.maxScore) * 100, 0) /
+                  grades.length) *
+                  100,
+              ) / 100,
         gradedAssignments: grades.length,
       };
     });
@@ -142,20 +152,23 @@ export class PrismaAnalyticsRepository {
       orderBy: [{ semester: { startsAt: "desc" } }, { course: { code: "asc" } }],
     });
 
-    const attendanceBySession = sections.flatMap((section) => section.attendanceSessions.map((session) => {
-      const counts = countAttendance(session.attendances.map(({ status }) => status));
-      counts.ABSENT += Math.max(0, section.enrollments.length - session.attendances.length);
-      const total = section.enrollments.length;
-      return {
-        sessionId: session.id,
-        title: session.title,
-        createdAt: session.createdAt,
-        className: `${section.course.code} · ${section.name}`,
-        total,
-        ...counts,
-        percentage: total === 0 ? 0 : Math.round(((counts.PRESENT + counts.LATE) / total) * 10_000) / 100,
-      };
-    }));
+    const attendanceBySession = sections.flatMap((section) =>
+      section.attendanceSessions.map((session) => {
+        const counts = countAttendance(session.attendances.map(({ status }) => status));
+        counts.ABSENT += Math.max(0, section.enrollments.length - session.attendances.length);
+        const total = section.enrollments.length;
+        return {
+          sessionId: session.id,
+          title: session.title,
+          createdAt: session.createdAt,
+          className: `${section.course.code} · ${section.name}`,
+          total,
+          ...counts,
+          percentage:
+            total === 0 ? 0 : Math.round(((counts.PRESENT + counts.LATE) / total) * 10_000) / 100,
+        };
+      }),
+    );
 
     const assignmentAnalytics = sections.flatMap((section) =>
       section.assignments.map((assignment) => {
@@ -180,29 +193,49 @@ export class PrismaAnalyticsRepository {
       }),
     );
 
-    const risks = sections.flatMap((section) => {
-      const sessionCount = section.attendanceSessions.length;
-      const overdue = section.assignments.filter((assignment) => assignment.deadline < now);
-      return section.enrollments.map(({ student }) => {
-        const attendanceCount = section.attendanceSessions.reduce((count, session) => {
-          const record = session.attendances.find((attendance) => attendance.studentId === student.id);
-          return count + (record?.status === AttendanceStatus.PRESENT || record?.status === AttendanceStatus.LATE ? 1 : 0);
-        }, 0);
-        const attendancePercent = sessionCount === 0 ? 100 : Math.round((attendanceCount / sessionCount) * 10_000) / 100;
-        const missedAssignments = overdue.filter((assignment) =>
-          !assignment.submissions.some((submission) => submission.studentId === student.id),
-        ).length;
-        if (attendancePercent >= thresholds.attendancePercent && missedAssignments < thresholds.missedAssignments) return null;
-        return {
-          studentId: student.id,
-          name: student.name,
-          email: student.email,
-          className: `${section.course.code} · ${section.name}`,
-          attendancePercent,
-          missedAssignments,
-        };
-      }).filter((student): student is NonNullable<typeof student> => student !== null);
-    }).slice(0, 50);
+    const risks = sections
+      .flatMap((section) => {
+        const sessionCount = section.attendanceSessions.length;
+        const overdue = section.assignments.filter((assignment) => assignment.deadline < now);
+        return section.enrollments
+          .map(({ student }) => {
+            const attendanceCount = section.attendanceSessions.reduce((count, session) => {
+              const record = session.attendances.find(
+                (attendance) => attendance.studentId === student.id,
+              );
+              return (
+                count +
+                (record?.status === AttendanceStatus.PRESENT ||
+                record?.status === AttendanceStatus.LATE
+                  ? 1
+                  : 0)
+              );
+            }, 0);
+            const attendancePercent =
+              sessionCount === 0
+                ? 100
+                : Math.round((attendanceCount / sessionCount) * 10_000) / 100;
+            const missedAssignments = overdue.filter(
+              (assignment) =>
+                !assignment.submissions.some((submission) => submission.studentId === student.id),
+            ).length;
+            if (
+              attendancePercent >= thresholds.attendancePercent &&
+              missedAssignments < thresholds.missedAssignments
+            )
+              return null;
+            return {
+              studentId: student.id,
+              name: student.name,
+              email: student.email,
+              className: `${section.course.code} · ${section.name}`,
+              attendancePercent,
+              missedAssignments,
+            };
+          })
+          .filter((student): student is NonNullable<typeof student> => student !== null);
+      })
+      .slice(0, 50);
 
     return {
       attendanceBySession,

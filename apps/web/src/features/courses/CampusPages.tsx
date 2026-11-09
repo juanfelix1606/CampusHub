@@ -60,7 +60,12 @@ interface QuerySnapshot<T> {
 }
 
 const courseSchema = z.object({
-  code: z.string().trim().min(2).max(20).regex(/^[A-Za-z0-9-]+$/, "Gunakan huruf, angka, atau tanda hubung."),
+  code: z
+    .string()
+    .trim()
+    .min(2)
+    .max(20)
+    .regex(/^[A-Za-z0-9-]+$/, "Gunakan huruf, angka, atau tanda hubung."),
   name: z.string().trim().min(3).max(120),
   credits: z.coerce.number().int().min(1).max(8),
 });
@@ -78,7 +83,8 @@ type SectionValues = z.infer<typeof sectionSchema>;
 const materialSchema = z.object({
   title: z.string().trim().min(2).max(160),
   description: z.string().max(2000),
-  file: z.custom<File>((file) => file instanceof File, "Pilih file materi.")
+  file: z
+    .custom<File>((file) => file instanceof File, "Pilih file materi.")
     .refine((file) => file.size <= 10 * 1024 * 1024, "Ukuran file maksimal 10 MB.")
     .refine((file) => {
       const expected: Record<string, string> = {
@@ -129,7 +135,12 @@ export function AdminCoursesPage() {
 
   useEffect(() => {
     if (!editingCourse) courseForm.reset({ code: "", name: "", credits: 3 });
-    else courseForm.reset({ code: editingCourse.code, name: editingCourse.name, credits: editingCourse.credits });
+    else
+      courseForm.reset({
+        code: editingCourse.code,
+        name: editingCourse.name,
+        credits: editingCourse.credits,
+      });
   }, [courseForm, editingCourse]);
 
   const invalidate = async () => {
@@ -141,7 +152,10 @@ export function AdminCoursesPage() {
   const courseMutation = useMutation({
     mutationFn: (values: CourseValues) =>
       editingCourse
-        ? apiRequest(`/courses/${editingCourse.id}`, { method: "PATCH", body: JSON.stringify(values) })
+        ? apiRequest(`/courses/${editingCourse.id}`, {
+            method: "PATCH",
+            body: JSON.stringify(values),
+          })
         : apiRequest("/courses", { method: "POST", body: JSON.stringify(values) }),
     onSuccess: async () => {
       await invalidate();
@@ -174,8 +188,14 @@ export function AdminCoursesPage() {
   const loadError =
     coursesQuery.error ?? sectionsQuery.error ?? semestersQuery.error ?? lecturersQuery.error;
   const mutationError =
-    courseMutation.error ?? deleteCourse.error ?? createSection.error ?? deleteSection.error ?? updateCapacity.error;
-  if ([coursesQuery, sectionsQuery, semestersQuery, lecturersQuery].some((query) => query.isLoading)) {
+    courseMutation.error ??
+    deleteCourse.error ??
+    createSection.error ??
+    deleteSection.error ??
+    updateCapacity.error;
+  if (
+    [coursesQuery, sectionsQuery, semestersQuery, lecturersQuery].some((query) => query.isLoading)
+  ) {
     return <LoadingState />;
   }
   if (loadError) return <ErrorState message={loadError.message} />;
@@ -185,7 +205,10 @@ export function AdminCoursesPage() {
   const lecturers = lecturersQuery.data?.data.lecturers ?? [];
 
   return (
-    <PageShell title="Manajemen mata kuliah & kelas" description="Kelola katalog, semester, dosen pengampu, dan kapasitas kelas.">
+    <PageShell
+      title="Manajemen mata kuliah & kelas"
+      description="Kelola katalog, semester, dosen pengampu, dan kapasitas kelas."
+    >
       {mutationError && <ErrorBanner message={mutationError.message} />}
       <section className="grid gap-8 lg:grid-cols-2">
         <Panel title={editingCourse ? "Ubah mata kuliah" : "Tambah mata kuliah"}>
@@ -200,27 +223,63 @@ export function AdminCoursesPage() {
               <input {...courseForm.register("name")} className={inputClassName} />
             </Field>
             <Field label="SKS" error={courseForm.formState.errors.credits?.message}>
-              <input type="number" min="1" max="8" {...courseForm.register("credits")} className={inputClassName} />
+              <input
+                type="number"
+                min="1"
+                max="8"
+                {...courseForm.register("credits")}
+                className={inputClassName}
+              />
             </Field>
             <div className="flex gap-2">
               <button disabled={courseMutation.isPending} className={primaryButton}>
-                {courseMutation.isPending ? "Menyimpan..." : editingCourse ? "Simpan perubahan" : "Tambah mata kuliah"}
+                {courseMutation.isPending
+                  ? "Menyimpan..."
+                  : editingCourse
+                    ? "Simpan perubahan"
+                    : "Tambah mata kuliah"}
               </button>
               {editingCourse && (
-                <button type="button" onClick={() => setEditingCourse(null)} className={secondaryButton}>Batal</button>
+                <button
+                  type="button"
+                  onClick={() => setEditingCourse(null)}
+                  className={secondaryButton}
+                >
+                  Batal
+                </button>
               )}
             </div>
           </form>
           <div className="mt-6 space-y-3">
-            {courses.length === 0 ? <EmptyState message="Belum ada mata kuliah." /> : courses.map((course) => (
-              <div key={course.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
-                <div><strong>{course.code}</strong><p className="text-sm text-slate-600">{course.name} · {course.credits} SKS</p></div>
-                <div className="flex gap-2">
-                  <button className={smallButton} onClick={() => setEditingCourse(course)}>Ubah</button>
-                  <button className={dangerButton} disabled={deleteCourse.isPending} onClick={() => deleteCourse.mutate(course.id)}>Hapus</button>
+            {courses.length === 0 ? (
+              <EmptyState message="Belum ada mata kuliah." />
+            ) : (
+              courses.map((course) => (
+                <div
+                  key={course.id}
+                  className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3"
+                >
+                  <div>
+                    <strong>{course.code}</strong>
+                    <p className="text-sm text-slate-600">
+                      {course.name} · {course.credits} SKS
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button className={smallButton} onClick={() => setEditingCourse(course)}>
+                      Ubah
+                    </button>
+                    <button
+                      className={dangerButton}
+                      disabled={deleteCourse.isPending}
+                      onClick={() => deleteCourse.mutate(course.id)}
+                    >
+                      Hapus
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </Panel>
 
@@ -232,19 +291,31 @@ export function AdminCoursesPage() {
             <Field label="Mata kuliah" error={sectionForm.formState.errors.courseId?.message}>
               <select {...sectionForm.register("courseId")} className={inputClassName}>
                 <option value="">Pilih mata kuliah</option>
-                {courses.map((course) => <option key={course.id} value={course.id}>{course.code} — {course.name}</option>)}
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.code} — {course.name}
+                  </option>
+                ))}
               </select>
             </Field>
             <Field label="Semester" error={sectionForm.formState.errors.semesterId?.message}>
               <select {...sectionForm.register("semesterId")} className={inputClassName}>
                 <option value="">Pilih semester</option>
-                {semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.name}</option>)}
+                {semesters.map((semester) => (
+                  <option key={semester.id} value={semester.id}>
+                    {semester.name}
+                  </option>
+                ))}
               </select>
             </Field>
             <Field label="Dosen pengampu" error={sectionForm.formState.errors.lecturerId?.message}>
               <select {...sectionForm.register("lecturerId")} className={inputClassName}>
                 <option value="">Pilih dosen</option>
-                {lecturers.map((lecturer) => <option key={lecturer.id} value={lecturer.id}>{lecturer.name}</option>)}
+                {lecturers.map((lecturer) => (
+                  <option key={lecturer.id} value={lecturer.id}>
+                    {lecturer.name}
+                  </option>
+                ))}
               </select>
             </Field>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -252,10 +323,21 @@ export function AdminCoursesPage() {
                 <input {...sectionForm.register("name")} className={inputClassName} />
               </Field>
               <Field label="Kapasitas" error={sectionForm.formState.errors.capacity?.message}>
-                <input type="number" min="1" max="500" {...sectionForm.register("capacity")} className={inputClassName} />
+                <input
+                  type="number"
+                  min="1"
+                  max="500"
+                  {...sectionForm.register("capacity")}
+                  className={inputClassName}
+                />
               </Field>
             </div>
-            <button disabled={createSection.isPending || !courses.length || !semesters.length || !lecturers.length} className={primaryButton}>
+            <button
+              disabled={
+                createSection.isPending || !courses.length || !semesters.length || !lecturers.length
+              }
+              className={primaryButton}
+            >
               {createSection.isPending ? "Membuat..." : "Buat kelas"}
             </button>
           </form>
@@ -263,13 +345,23 @@ export function AdminCoursesPage() {
       </section>
 
       <Panel title="Kelas aktif" className="mt-8">
-        {sections.length === 0 ? <EmptyState message="Belum ada kelas." /> : (
+        {sections.length === 0 ? (
+          <EmptyState message="Belum ada kelas." />
+        ) : (
           <div className="divide-y divide-slate-100">
             {sections.map((section) => (
-              <div key={section.id} className="flex flex-wrap items-center justify-between gap-4 py-4">
+              <div
+                key={section.id}
+                className="flex flex-wrap items-center justify-between gap-4 py-4"
+              >
                 <div>
-                  <strong>{section.course.code} · Kelas {section.name}</strong>
-                  <p className="text-sm text-slate-600">{section.semester.name} · {section.lecturer.name} · {section._count.enrollments}/{section.capacity} mahasiswa</p>
+                  <strong>
+                    {section.course.code} · Kelas {section.name}
+                  </strong>
+                  <p className="text-sm text-slate-600">
+                    {section.semester.name} · {section.lecturer.name} · {section._count.enrollments}
+                    /{section.capacity} mahasiswa
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -285,7 +377,13 @@ export function AdminCoursesPage() {
                       }
                     }}
                   />
-                  <button className={dangerButton} disabled={deleteSection.isPending} onClick={() => deleteSection.mutate(section.id)}>Hapus</button>
+                  <button
+                    className={dangerButton}
+                    disabled={deleteSection.isPending}
+                    onClick={() => deleteSection.mutate(section.id)}
+                  >
+                    Hapus
+                  </button>
                 </div>
               </div>
             ))}
@@ -307,14 +405,21 @@ export function LecturerClassesPage() {
   const classes = classesQuery.data?.data.items ?? [];
 
   return (
-    <PageShell title="Kelas yang kuampu" description="Bagikan materi pembelajaran hanya kepada mahasiswa terdaftar.">
-      {classes.length === 0 ? <EmptyState message="Belum ada kelas yang diampu." /> : (
+    <PageShell
+      title="Kelas yang kuampu"
+      description="Bagikan materi pembelajaran hanya kepada mahasiswa terdaftar."
+    >
+      {classes.length === 0 ? (
+        <EmptyState message="Belum ada kelas yang diampu." />
+      ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           {classes.map((classSection) => (
             <LecturerClassCard
               key={classSection.id}
               section={classSection}
-              onChanged={() => queryClient.invalidateQueries({ queryKey: ["materials", classSection.id] })}
+              onChanged={() =>
+                queryClient.invalidateQueries({ queryKey: ["materials", classSection.id] })
+              }
             />
           ))}
         </div>
@@ -326,7 +431,8 @@ export function LecturerClassesPage() {
 function LecturerClassCard({ section, onChanged }: { section: ClassSection; onChanged(): void }) {
   const materialsQuery = useQuery({
     queryKey: ["materials", section.id],
-    queryFn: () => apiRequest<ApiEnvelope<PageResult<Material>>>(`/classes/${section.id}/materials`),
+    queryFn: () =>
+      apiRequest<ApiEnvelope<PageResult<Material>>>(`/classes/${section.id}/materials`),
   });
   const form = useForm<MaterialValues>({
     resolver: zodResolver(materialSchema),
@@ -356,7 +462,8 @@ function LecturerClassCard({ section, onChanged }: { section: ClassSection; onCh
     },
   });
   const remove = useMutation({
-    mutationFn: (materialId: string) => apiRequest(`/materials/${materialId}`, { method: "DELETE" }),
+    mutationFn: (materialId: string) =>
+      apiRequest(`/materials/${materialId}`, { method: "DELETE" }),
     onSuccess: onChanged,
   });
   const updateMaterial = useMutation({
@@ -373,7 +480,9 @@ function LecturerClassCard({ section, onChanged }: { section: ClassSection; onCh
 
   return (
     <Panel title={`${section.course.code} · Kelas ${section.name}`}>
-      <p className="mb-4 text-sm text-slate-600">{section.semester.name} · {section._count.enrollments}/{section.capacity} mahasiswa</p>
+      <p className="mb-4 text-sm text-slate-600">
+        {section.semester.name} · {section._count.enrollments}/{section.capacity} mahasiswa
+      </p>
       {upload.error && <ErrorBanner message={upload.error.message} />}
       {updateMaterial.error && <ErrorBanner message={updateMaterial.error.message} />}
       {editingMaterial && (
@@ -381,7 +490,9 @@ function LecturerClassCard({ section, onChanged }: { section: ClassSection; onCh
           className="mb-5 space-y-3 rounded-lg bg-slate-50 p-4"
           onSubmit={editForm.handleSubmit((values) => updateMaterial.mutate(values))}
         >
-          <p className="text-sm font-semibold text-slate-800">Ubah materi: {editingMaterial.fileName}</p>
+          <p className="text-sm font-semibold text-slate-800">
+            Ubah materi: {editingMaterial.fileName}
+          </p>
           <Field label="Judul" error={editForm.formState.errors.title?.message}>
             <input {...editForm.register("title")} className={inputClassName} />
           </Field>
@@ -392,7 +503,13 @@ function LecturerClassCard({ section, onChanged }: { section: ClassSection; onCh
             <button disabled={updateMaterial.isPending} className={primaryButton}>
               {updateMaterial.isPending ? "Menyimpan..." : "Simpan"}
             </button>
-            <button type="button" className={secondaryButton} onClick={() => setEditingMaterial(null)}>Batal</button>
+            <button
+              type="button"
+              className={secondaryButton}
+              onClick={() => setEditingMaterial(null)}
+            >
+              Batal
+            </button>
           </div>
         </form>
       )}
@@ -414,7 +531,9 @@ function LecturerClassCard({ section, onChanged }: { section: ClassSection; onCh
             }}
           />
         </Field>
-        <button disabled={upload.isPending} className={primaryButton}>{upload.isPending ? "Mengunggah..." : "Unggah materi"}</button>
+        <button disabled={upload.isPending} className={primaryButton}>
+          {upload.isPending ? "Mengunggah..." : "Unggah materi"}
+        </button>
       </form>
       <MaterialList
         query={materialsQuery}
@@ -439,9 +558,10 @@ export function StudentClassesPage() {
   });
   const catalogQuery = useQuery({
     queryKey: ["class-catalog", search, semesterId],
-    queryFn: () => apiRequest<ApiEnvelope<PageResult<ClassSection>>>(
-      `/classes?pageSize=100${search ? `&q=${encodeURIComponent(search)}` : ""}${semesterId ? `&semesterId=${semesterId}` : ""}`,
-    ),
+    queryFn: () =>
+      apiRequest<ApiEnvelope<PageResult<ClassSection>>>(
+        `/classes?pageSize=100${search ? `&q=${encodeURIComponent(search)}` : ""}${semesterId ? `&semesterId=${semesterId}` : ""}`,
+      ),
   });
   const mineQuery = useQuery({
     queryKey: ["student-classes"],
@@ -449,7 +569,9 @@ export function StudentClassesPage() {
   });
   const enrollment = useMutation({
     mutationFn: ({ id, action }: { id: string; action: "enroll" | "unenroll" }) =>
-      apiRequest(`/classes/${id}/enrollments/me`, { method: action === "enroll" ? "POST" : "DELETE" }),
+      apiRequest(`/classes/${id}/enrollments/me`, {
+        method: action === "enroll" ? "POST" : "DELETE",
+      }),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["student-classes"] }),
@@ -458,7 +580,8 @@ export function StudentClassesPage() {
     },
   });
 
-  if ([semestersQuery, catalogQuery, mineQuery].some((query) => query.isLoading)) return <LoadingState />;
+  if ([semestersQuery, catalogQuery, mineQuery].some((query) => query.isLoading))
+    return <LoadingState />;
   const queryError = semestersQuery.error ?? catalogQuery.error ?? mineQuery.error;
   if (queryError) return <ErrorState message={queryError.message} />;
   const semesters = semestersQuery.data?.data.semesters ?? [];
@@ -466,16 +589,34 @@ export function StudentClassesPage() {
   const enrolled = mineQuery.data?.data.items ?? [];
 
   return (
-    <PageShell title="Kelas saya" description="Cari kelas semester ini, lalu kelola kelas yang sudah diikuti.">
+    <PageShell
+      title="Kelas saya"
+      description="Cari kelas semester ini, lalu kelola kelas yang sudah diikuti."
+    >
       {enrollment.error && <ErrorBanner message={enrollment.error.message} />}
       <Panel title="Kelas yang diikuti">
-        {enrolled.length === 0 ? <EmptyState message="Kamu belum terdaftar di kelas mana pun." /> : (
+        {enrolled.length === 0 ? (
+          <EmptyState message="Kamu belum terdaftar di kelas mana pun." />
+        ) : (
           <div className="grid gap-5 lg:grid-cols-2">
             {enrolled.map((section) => (
               <div key={section.id} className="rounded-xl border border-slate-200 p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div><h3 className="font-semibold text-slate-900">{section.course.code} · Kelas {section.name}</h3><p className="text-sm text-slate-600">{section.course.name} · {section.semester.name}</p></div>
-                  <button className={smallButton} disabled={enrollment.isPending} onClick={() => enrollment.mutate({ id: section.id, action: "unenroll" })}>Keluar kelas</button>
+                  <div>
+                    <h3 className="font-semibold text-slate-900">
+                      {section.course.code} · Kelas {section.name}
+                    </h3>
+                    <p className="text-sm text-slate-600">
+                      {section.course.name} · {section.semester.name}
+                    </p>
+                  </div>
+                  <button
+                    className={smallButton}
+                    disabled={enrollment.isPending}
+                    onClick={() => enrollment.mutate({ id: section.id, action: "unenroll" })}
+                  >
+                    Keluar kelas
+                  </button>
                 </div>
                 <EnrolledMaterials section={section} />
               </div>
@@ -485,20 +626,43 @@ export function StudentClassesPage() {
       </Panel>
       <Panel title="Katalog kelas" className="mt-8">
         <div className="mb-5 grid gap-3 sm:grid-cols-2">
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari nama atau kode mata kuliah" className={inputClassName} />
-          <select value={semesterId} onChange={(event) => setSemesterId(event.target.value)} className={inputClassName}>
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Cari nama atau kode mata kuliah"
+            className={inputClassName}
+          />
+          <select
+            value={semesterId}
+            onChange={(event) => setSemesterId(event.target.value)}
+            className={inputClassName}
+          >
             <option value="">Semua semester</option>
-            {semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.name}</option>)}
+            {semesters.map((semester) => (
+              <option key={semester.id} value={semester.id}>
+                {semester.name}
+              </option>
+            ))}
           </select>
         </div>
-        {catalog.length === 0 ? <EmptyState message="Tidak ada kelas tersedia untuk filter ini." /> : (
+        {catalog.length === 0 ? (
+          <EmptyState message="Tidak ada kelas tersedia untuk filter ini." />
+        ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {catalog.map((section) => (
               <div key={section.id} className="rounded-xl border border-slate-200 p-4">
-                <h3 className="font-semibold text-slate-900">{section.course.code} · Kelas {section.name}</h3>
-                <p className="mt-1 text-sm text-slate-600">{section.course.name} · {section.course.credits} SKS</p>
-                <p className="text-sm text-slate-600">{section.semester.name} · {section.lecturer.name}</p>
-                <p className="mt-2 text-sm text-slate-500">{section._count.enrollments}/{section.capacity} mahasiswa</p>
+                <h3 className="font-semibold text-slate-900">
+                  {section.course.code} · Kelas {section.name}
+                </h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  {section.course.name} · {section.course.credits} SKS
+                </p>
+                <p className="text-sm text-slate-600">
+                  {section.semester.name} · {section.lecturer.name}
+                </p>
+                <p className="mt-2 text-sm text-slate-500">
+                  {section._count.enrollments}/{section.capacity} mahasiswa
+                </p>
                 <button
                   className={`${primaryButton} mt-3`}
                   disabled={enrollment.isPending || section._count.enrollments >= section.capacity}
@@ -518,7 +682,8 @@ export function StudentClassesPage() {
 function EnrolledMaterials({ section }: { section: ClassSection }) {
   const query = useQuery({
     queryKey: ["materials", section.id],
-    queryFn: () => apiRequest<ApiEnvelope<PageResult<Material>>>(`/classes/${section.id}/materials`),
+    queryFn: () =>
+      apiRequest<ApiEnvelope<PageResult<Material>>>(`/classes/${section.id}/materials`),
   });
   return (
     <div className="mt-4 border-t border-slate-100 pt-3">
@@ -548,7 +713,12 @@ function MaterialList({
       downloadFile(`/materials/${material.id}/download`, material.fileName),
   });
   if (query.isLoading) return <p className="mt-4 text-sm text-slate-500">Memuat materi...</p>;
-  if (query.error) return <p role="alert" className="mt-4 text-sm text-red-700">{query.error.message}</p>;
+  if (query.error)
+    return (
+      <p role="alert" className="mt-4 text-sm text-red-700">
+        {query.error.message}
+      </p>
+    );
   const materials = query.data?.data.items ?? [];
   if (!materials.length) return <p className="mt-4 text-sm text-slate-500">Belum ada materi.</p>;
   return (
@@ -556,14 +726,36 @@ function MaterialList({
       {download.error && <ErrorBanner message={download.error.message} />}
       <ul className="mt-4 space-y-2">
         {materials.map((material) => (
-          <li key={material.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2">
-            <div><p className="text-sm font-medium text-slate-800">{material.title}</p><p className="text-xs text-slate-500">{material.fileName}</p></div>
+          <li
+            key={material.id}
+            className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2"
+          >
+            <div>
+              <p className="text-sm font-medium text-slate-800">{material.title}</p>
+              <p className="text-xs text-slate-500">{material.fileName}</p>
+            </div>
             <div className="flex gap-2">
-              <button className={smallButton} disabled={download.isPending} onClick={() => download.mutate(material)}>
+              <button
+                className={smallButton}
+                disabled={download.isPending}
+                onClick={() => download.mutate(material)}
+              >
                 {download.isPending ? "Mengunduh..." : "Unduh"}
               </button>
-              {canEdit && onEdit && <button className={smallButton} onClick={() => onEdit(material)}>Ubah</button>}
-              {canDelete && onDelete && <button className={dangerButton} disabled={deleting} onClick={() => onDelete(material)}>Hapus</button>}
+              {canEdit && onEdit && (
+                <button className={smallButton} onClick={() => onEdit(material)}>
+                  Ubah
+                </button>
+              )}
+              {canDelete && onDelete && (
+                <button
+                  className={dangerButton}
+                  disabled={deleting}
+                  onClick={() => onDelete(material)}
+                >
+                  Hapus
+                </button>
+              )}
             </div>
           </li>
         ))}
@@ -572,12 +764,24 @@ function MaterialList({
   );
 }
 
-function PageShell({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+function PageShell({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-6 py-10">
-      <Link to="/dashboard" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">← Dashboard</Link>
+      <Link to="/dashboard" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+        ← Dashboard
+      </Link>
       <header className="my-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">CampusHub</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">
+          CampusHub
+        </p>
         <h1 className="mt-2 text-3xl font-bold text-slate-900">{title}</h1>
         <p className="mt-2 text-slate-600">{description}</p>
       </header>
@@ -586,7 +790,15 @@ function PageShell({ title, description, children }: { title: string; descriptio
   );
 }
 
-function Panel({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
+function Panel({
+  title,
+  children,
+  className = "",
+}: {
+  title: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <section className={`rounded-2xl border border-slate-200 bg-white p-6 shadow-sm ${className}`}>
       <h2 className="mb-5 text-lg font-semibold text-slate-900">{title}</h2>
@@ -614,15 +826,28 @@ function EmptyState({ message }: { message: string }) {
 }
 
 function ErrorState({ message }: { message: string }) {
-  return <main className="mx-auto max-w-5xl px-6 py-12"><ErrorBanner message={message} /></main>;
+  return (
+    <main className="mx-auto max-w-5xl px-6 py-12">
+      <ErrorBanner message={message} />
+    </main>
+  );
 }
 
 function ErrorBanner({ message }: { message: string }) {
-  return <p role="alert" className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{message}</p>;
+  return (
+    <p role="alert" className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      {message}
+    </p>
+  );
 }
 
-const inputClassName = "mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
-const primaryButton = "rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60";
-const secondaryButton = "rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50";
-const smallButton = "rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50";
-const dangerButton = "rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50";
+const inputClassName =
+  "mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+const primaryButton =
+  "rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60";
+const secondaryButton =
+  "rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50";
+const smallButton =
+  "rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50";
+const dangerButton =
+  "rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50";

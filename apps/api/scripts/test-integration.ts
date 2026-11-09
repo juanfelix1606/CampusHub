@@ -12,7 +12,9 @@ if (!databaseUrl) {
 
 const parsedUrl = new URL(databaseUrl);
 if (!parsedUrl.pathname.replace(/^\//, "").endsWith("_test")) {
-  throw new Error("TEST_DATABASE_URL must point to a dedicated database whose name ends with _test.");
+  throw new Error(
+    "TEST_DATABASE_URL must point to a dedicated database whose name ends with _test.",
+  );
 }
 
 const environment = { ...process.env, DATABASE_URL: databaseUrl };

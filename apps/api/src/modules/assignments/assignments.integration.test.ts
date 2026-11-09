@@ -9,7 +9,8 @@ import { PrismaAuthRepository } from "../auth/auth.repository";
 import type { FileStorage } from "../materials/file-storage";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-if (!databaseUrl) throw new Error("TEST_DATABASE_URL is required for assignment integration tests.");
+if (!databaseUrl)
+  throw new Error("TEST_DATABASE_URL is required for assignment integration tests.");
 if (!new URL(databaseUrl).pathname.replace(/^\//, "").endsWith("_test")) {
   throw new Error("Assignment integration tests require a dedicated database ending in _test.");
 }
@@ -19,13 +20,17 @@ const marker = `assignments-integration-${randomUUID()}`;
 const secret = "postgres-integration-test-secret-longer-than-32-characters";
 class MemoryFileStorage implements FileStorage {
   files = new Map<string, Buffer>();
-  async save(key: string, contents: Buffer) { this.files.set(key, Buffer.from(contents)); }
+  async save(key: string, contents: Buffer) {
+    this.files.set(key, Buffer.from(contents));
+  }
   async read(key: string) {
     const contents = this.files.get(key);
     if (!contents) throw new Error("File not found.");
     return Buffer.from(contents);
   }
-  async delete(key: string) { this.files.delete(key); }
+  async delete(key: string) {
+    this.files.delete(key);
+  }
 }
 
 const storage = new MemoryFileStorage();
@@ -71,11 +76,41 @@ beforeAll(async () => {
   const passwordHash = await bcrypt.hash("Integration-only-password-123", 4);
   await prisma.user.createMany({
     data: [
-      { id: ids.lecturer, name: "Assignment Lecturer", email: `${marker}-lecturer@test.local`, passwordHash, role: "LECTURER" },
-      { id: ids.otherLecturer, name: "Other Assignment Lecturer", email: `${marker}-other-lecturer@test.local`, passwordHash, role: "LECTURER" },
-      { id: ids.student, name: "Assignment Student", email: `${marker}-student@test.local`, passwordHash, role: "STUDENT" },
-      { id: ids.otherStudent, name: "Other Assignment Student", email: `${marker}-other-student@test.local`, passwordHash, role: "STUDENT" },
-      { id: ids.outsider, name: "Outsider Student", email: `${marker}-outsider@test.local`, passwordHash, role: "STUDENT" },
+      {
+        id: ids.lecturer,
+        name: "Assignment Lecturer",
+        email: `${marker}-lecturer@test.local`,
+        passwordHash,
+        role: "LECTURER",
+      },
+      {
+        id: ids.otherLecturer,
+        name: "Other Assignment Lecturer",
+        email: `${marker}-other-lecturer@test.local`,
+        passwordHash,
+        role: "LECTURER",
+      },
+      {
+        id: ids.student,
+        name: "Assignment Student",
+        email: `${marker}-student@test.local`,
+        passwordHash,
+        role: "STUDENT",
+      },
+      {
+        id: ids.otherStudent,
+        name: "Other Assignment Student",
+        email: `${marker}-other-student@test.local`,
+        passwordHash,
+        role: "STUDENT",
+      },
+      {
+        id: ids.outsider,
+        name: "Outsider Student",
+        email: `${marker}-outsider@test.local`,
+        passwordHash,
+        role: "STUDENT",
+      },
     ],
   });
   await prisma.semester.create({
@@ -87,7 +122,12 @@ beforeAll(async () => {
     },
   });
   await prisma.course.create({
-    data: { id: ids.course, code: `A${randomUUID().slice(0, 7).toUpperCase()}`, name: "Assignment Course", credits: 3 },
+    data: {
+      id: ids.course,
+      code: `A${randomUUID().slice(0, 7).toUpperCase()}`,
+      name: "Assignment Course",
+      credits: 3,
+    },
   });
   await prisma.classSection.create({
     data: {
@@ -147,9 +187,7 @@ afterAll(async () => {
 
 describe("assignments, submissions, and grading with PostgreSQL", () => {
   it("publishes the assignment operations in Swagger UI", async () => {
-    const docs = await request(app)
-      .get("/api/docs/swagger-ui-init.js")
-      .expect(200);
+    const docs = await request(app).get("/api/docs/swagger-ui-init.js").expect(200);
     expect(docs.text).toContain("/classes/{classId}/assignments");
     expect(docs.text).toContain("/assignments/{assignmentId}/submissions/me");
   });
@@ -177,10 +215,7 @@ describe("assignments, submissions, and grading with PostgreSQL", () => {
       .expect(200)
       .expect(({ body }) => expect(body.data.assignment.title).toBe("Updated CRUD task"));
 
-    await request(app)
-      .delete(`/api/v1/assignments/${assignmentId}`)
-      .set(lecturer)
-      .expect(204);
+    await request(app).delete(`/api/v1/assignments/${assignmentId}`).set(lecturer).expect(204);
     expect(await prisma.assignment.findUnique({ where: { id: assignmentId } })).toBeNull();
   });
 
@@ -261,9 +296,9 @@ describe("assignments, submissions, and grading with PostgreSQL", () => {
         where: { assignmentId: ids.assignment, studentId: ids.student },
       }),
     ).toBe(1);
-    expect(
-      await prisma.submissionVersion.count({ where: { submissionId: submission.id } }),
-    ).toBe(3);
+    expect(await prisma.submissionVersion.count({ where: { submissionId: submission.id } })).toBe(
+      3,
+    );
   });
 
   it("enforces late policies and labels accepted late submissions", async () => {
@@ -304,8 +339,12 @@ describe("assignments, submissions, and grading with PostgreSQL", () => {
       },
     });
     expect(submission.version).toBe(2);
-    expect(await prisma.submission.count({ where: { assignmentId: ids.concurrentAssignment } })).toBe(1);
-    expect(await prisma.submissionVersion.count({ where: { submissionId: submission.id } })).toBe(2);
+    expect(
+      await prisma.submission.count({ where: { assignmentId: ids.concurrentAssignment } }),
+    ).toBe(1);
+    expect(await prisma.submissionVersion.count({ where: { submissionId: submission.id } })).toBe(
+      2,
+    );
   });
 
   it("validates grade bounds and records who changed a grade and when", async () => {
@@ -375,11 +414,15 @@ describe("assignments, submissions, and grading with PostgreSQL", () => {
       where: { submissionId, fileKey: { not: null } },
     });
     await request(app)
-      .get(`/api/v1/assignments/${ids.assignment}/submissions/${submissionId}/versions/${historicalVersion.id}/file`)
+      .get(
+        `/api/v1/assignments/${ids.assignment}/submissions/${submissionId}/versions/${historicalVersion.id}/file`,
+      )
       .set(bearer(ids.outsider, UserRole.STUDENT))
       .expect(403);
     await request(app)
-      .get(`/api/v1/assignments/${ids.assignment}/submissions/${submissionId}/versions/${historicalVersion.id}/file`)
+      .get(
+        `/api/v1/assignments/${ids.assignment}/submissions/${submissionId}/versions/${historicalVersion.id}/file`,
+      )
       .set(bearer(ids.student, UserRole.STUDENT))
       .expect(200);
     await request(app)
@@ -430,6 +473,8 @@ describe("assignments, submissions, and grading with PostgreSQL", () => {
       .get("/api/v1/assignments?status=NOT_SUBMITTED&page=1&pageSize=100")
       .set(bearer(ids.otherStudent, UserRole.STUDENT))
       .expect(200);
-    expect(filtered.body.data.items.some((item: { id: string }) => item.id === assignment.id)).toBe(true);
+    expect(filtered.body.data.items.some((item: { id: string }) => item.id === assignment.id)).toBe(
+      true,
+    );
   });
 });

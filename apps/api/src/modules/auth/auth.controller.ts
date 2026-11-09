@@ -52,13 +52,13 @@ export class AuthController {
   private cookieOptions(): {
     httpOnly: true;
     secure: boolean;
-    sameSite: "lax" | "none";
+    sameSite: "lax";
     path: string;
   } {
     return {
       httpOnly: true,
       secure: this.config.cookieSecure,
-      sameSite: this.config.cookieSecure ? "none" : "lax",
+      sameSite: "lax",
       path: "/api/v1/auth",
     };
   }

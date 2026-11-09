@@ -9,7 +9,8 @@ import { PrismaAuthRepository } from "../auth/auth.repository";
 import { hashSessionNonce, issueQrToken } from "./attendance-token";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-if (!databaseUrl) throw new Error("TEST_DATABASE_URL is required for attendance integration tests.");
+if (!databaseUrl)
+  throw new Error("TEST_DATABASE_URL is required for attendance integration tests.");
 if (!new URL(databaseUrl).pathname.replace(/^\//, "").endsWith("_test")) {
   throw new Error("Attendance integration tests require a dedicated database ending in _test.");
 }
@@ -75,12 +76,48 @@ beforeAll(async () => {
   const passwordHash = await bcrypt.hash("Integration-only-password-123", 4);
   await prisma.user.createMany({
     data: [
-      { id: ids.admin, name: "Attendance Admin", email: `${marker}-admin@test.local`, passwordHash, role: "ADMIN" },
-      { id: ids.lecturer, name: "Attendance Lecturer", email: `${marker}-lecturer@test.local`, passwordHash, role: "LECTURER" },
-      { id: ids.otherLecturer, name: "Other Attendance Lecturer", email: `${marker}-other-lecturer@test.local`, passwordHash, role: "LECTURER" },
-      { id: ids.student, name: "Attendance Student", email: `${marker}-student@test.local`, passwordHash, role: "STUDENT" },
-      { id: ids.otherStudent, name: "Second Attendance Student", email: `${marker}-other-student@test.local`, passwordHash, role: "STUDENT" },
-      { id: ids.outsider, name: "Outsider Student", email: `${marker}-outsider@test.local`, passwordHash, role: "STUDENT" },
+      {
+        id: ids.admin,
+        name: "Attendance Admin",
+        email: `${marker}-admin@test.local`,
+        passwordHash,
+        role: "ADMIN",
+      },
+      {
+        id: ids.lecturer,
+        name: "Attendance Lecturer",
+        email: `${marker}-lecturer@test.local`,
+        passwordHash,
+        role: "LECTURER",
+      },
+      {
+        id: ids.otherLecturer,
+        name: "Other Attendance Lecturer",
+        email: `${marker}-other-lecturer@test.local`,
+        passwordHash,
+        role: "LECTURER",
+      },
+      {
+        id: ids.student,
+        name: "Attendance Student",
+        email: `${marker}-student@test.local`,
+        passwordHash,
+        role: "STUDENT",
+      },
+      {
+        id: ids.otherStudent,
+        name: "Second Attendance Student",
+        email: `${marker}-other-student@test.local`,
+        passwordHash,
+        role: "STUDENT",
+      },
+      {
+        id: ids.outsider,
+        name: "Outsider Student",
+        email: `${marker}-outsider@test.local`,
+        passwordHash,
+        role: "STUDENT",
+      },
     ],
   });
   await prisma.semester.create({
@@ -101,8 +138,20 @@ beforeAll(async () => {
   });
   await prisma.classSection.createMany({
     data: [
-      { id: ids.section, courseId: ids.course, semesterId: ids.semester, lecturerId: ids.lecturer, name: "A" },
-      { id: ids.otherSection, courseId: ids.course, semesterId: ids.semester, lecturerId: ids.lecturer, name: "B" },
+      {
+        id: ids.section,
+        courseId: ids.course,
+        semesterId: ids.semester,
+        lecturerId: ids.lecturer,
+        name: "A",
+      },
+      {
+        id: ids.otherSection,
+        courseId: ids.course,
+        semesterId: ids.semester,
+        lecturerId: ids.lecturer,
+        name: "B",
+      },
     ],
   });
   await prisma.enrollment.createMany({
@@ -201,7 +250,9 @@ describe("QR attendance with PostgreSQL", () => {
       .get(`/api/v1/attendance/me?classId=${ids.section}`)
       .set(headers)
       .expect(200);
-    expect(historyBeforeCheckIn.body.data.items.some((item: { id: string }) => item.id === session.id)).toBe(false);
+    expect(
+      historyBeforeCheckIn.body.data.items.some((item: { id: string }) => item.id === session.id),
+    ).toBe(false);
     const results = await Promise.all([
       request(app).post("/api/v1/attendance/check-in").set(headers).send(body),
       request(app).post("/api/v1/attendance/check-in").set(headers).send(body),
@@ -214,8 +265,10 @@ describe("QR attendance with PostgreSQL", () => {
       .get(`/api/v1/attendance/me?classId=${ids.section}`)
       .set(headers)
       .expect(200);
-    expect(historyAfterCheckIn.body.data.items.find((item: { id: string }) => item.id === session.id).myAttendance.status)
-      .toBe(AttendanceStatus.PRESENT);
+    expect(
+      historyAfterCheckIn.body.data.items.find((item: { id: string }) => item.id === session.id)
+        .myAttendance.status,
+    ).toBe(AttendanceStatus.PRESENT);
 
     await request(app)
       .post("/api/v1/attendance/check-in")

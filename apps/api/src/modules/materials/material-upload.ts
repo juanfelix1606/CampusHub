@@ -18,14 +18,19 @@ export interface UploadedMaterialFile {
   size: number;
 }
 
-export function validateMaterialFile(file: UploadedMaterialFile): { extension: string; mimeType: string } {
+export function validateMaterialFile(file: UploadedMaterialFile): {
+  extension: string;
+  mimeType: string;
+} {
   if (file.size > MAX_MATERIAL_FILE_SIZE) {
     throw new PayloadTooLargeError("Material files must be 10 MB or smaller.");
   }
   const extension = extname(file.originalname).toLowerCase();
   const mimeType = allowedTypes.get(extension);
   if (!mimeType || file.mimetype !== mimeType) {
-    throw new BadRequestError("Only PDF, PNG, and JPEG files with matching extensions and MIME types are allowed.");
+    throw new BadRequestError(
+      "Only PDF, PNG, and JPEG files with matching extensions and MIME types are allowed.",
+    );
   }
   const validSignature =
     (extension === ".pdf" && file.buffer.subarray(0, 5).toString() === "%PDF-") ||
@@ -47,7 +52,11 @@ export function createMaterialUploadMiddleware(): RequestHandler {
     fileFilter: (_request, file, callback) => {
       const extension = extname(file.originalname).toLowerCase();
       if (allowedTypes.get(extension) !== file.mimetype) {
-        callback(new BadRequestError("Only PDF, PNG, and JPEG files with matching extensions and MIME types are allowed."));
+        callback(
+          new BadRequestError(
+            "Only PDF, PNG, and JPEG files with matching extensions and MIME types are allowed.",
+          ),
+        );
         return;
       }
       callback(null, true);
@@ -55,7 +64,12 @@ export function createMaterialUploadMiddleware(): RequestHandler {
   }).single("file");
 }
 
-export const materialUploadErrorHandler: ErrorRequestHandler = (error, _request, _response, next) => {
+export const materialUploadErrorHandler: ErrorRequestHandler = (
+  error,
+  _request,
+  _response,
+  next,
+) => {
   if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
     next(new PayloadTooLargeError("Material files must be 10 MB or smaller."));
     return;

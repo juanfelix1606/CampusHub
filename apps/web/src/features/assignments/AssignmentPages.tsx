@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
@@ -72,34 +72,44 @@ interface Assignment {
   _count?: { submissions: number };
 }
 
-const assignmentFormSchema = z.object({
-  title: z.string().trim().min(2).max(160),
-  description: z.string().max(5000),
-  deadline: z.string().min(1, "Tentukan deadline."),
-  maxScore: z.coerce.number().int().min(1).max(1000),
-  allowLate: z.boolean(),
-  removeAttachment: z.boolean().optional(),
-  file: z.custom<File>((value) => value === undefined || value instanceof File).optional(),
-}).refine((value) => Number.isFinite(Date.parse(value.deadline)), {
-  path: ["deadline"],
-  message: "Deadline tidak valid.",
-});
+const assignmentFormSchema = z
+  .object({
+    title: z.string().trim().min(2).max(160),
+    description: z.string().max(5000),
+    deadline: z.string().min(1, "Tentukan deadline."),
+    maxScore: z.coerce.number().int().min(1).max(1000),
+    allowLate: z.boolean(),
+    removeAttachment: z.boolean().optional(),
+    file: z.custom<File>((value) => value === undefined || value instanceof File).optional(),
+  })
+  .refine((value) => Number.isFinite(Date.parse(value.deadline)), {
+    path: ["deadline"],
+    message: "Deadline tidak valid.",
+  });
 type AssignmentFormInput = z.input<typeof assignmentFormSchema>;
 type AssignmentFormValues = z.output<typeof assignmentFormSchema>;
 
-const submissionFormSchema = z.object({
-  textContent: z.string().max(20_000),
-  file: z.custom<File>((value) => value === undefined || value instanceof File).optional(),
-}).refine((value) => Boolean(value.textContent.trim()) || Boolean(value.file), {
-  path: ["textContent"],
-  message: "Isi jawaban teks atau lampirkan file.",
-}).refine((value) => !value.file || value.file.size <= 10 * 1024 * 1024, {
-  path: ["file"],
-  message: "Ukuran file maksimal 10 MB.",
-}).refine((value) => !value.file || ["application/pdf", "image/png", "image/jpeg"].includes(value.file.type), {
-  path: ["file"],
-  message: "Pilih file PDF, PNG, atau JPEG.",
-});
+const submissionFormSchema = z
+  .object({
+    textContent: z.string().max(20_000),
+    file: z.custom<File>((value) => value === undefined || value instanceof File).optional(),
+  })
+  .refine((value) => Boolean(value.textContent.trim()) || Boolean(value.file), {
+    path: ["textContent"],
+    message: "Isi jawaban teks atau lampirkan file.",
+  })
+  .refine((value) => !value.file || value.file.size <= 10 * 1024 * 1024, {
+    path: ["file"],
+    message: "Ukuran file maksimal 10 MB.",
+  })
+  .refine(
+    (value) =>
+      !value.file || ["application/pdf", "image/png", "image/jpeg"].includes(value.file.type),
+    {
+      path: ["file"],
+      message: "Pilih file PDF, PNG, atau JPEG.",
+    },
+  );
 type SubmissionFormInput = z.input<typeof submissionFormSchema>;
 type SubmissionFormValues = z.output<typeof submissionFormSchema>;
 
@@ -120,14 +130,20 @@ export function LecturerAssignmentsPage() {
     queryKey: ["lecturer-classes"],
     queryFn: () => apiRequest<ApiEnvelope<PageResult<ClassSection>>>("/classes/mine?pageSize=100"),
   });
-  const classes = classesQuery.data?.data.items ?? [];
+  const classes = useMemo(
+    () => classesQuery.data?.data.items ?? [],
+    [classesQuery.data?.data.items],
+  );
   useEffect(() => {
     if (!classId && classes[0]) setClassId(classes[0].id);
   }, [classId, classes]);
 
   const assignmentsQuery = useQuery({
     queryKey: ["assignments", "lecturer", classId],
-    queryFn: () => apiRequest<ApiEnvelope<PageResult<Assignment>>>(`/assignments?classId=${classId}&pageSize=100`),
+    queryFn: () =>
+      apiRequest<ApiEnvelope<PageResult<Assignment>>>(
+        `/assignments?classId=${classId}&pageSize=100`,
+      ),
     enabled: Boolean(classId),
   });
   const createForm = useForm<AssignmentFormInput, unknown, AssignmentFormValues>({
@@ -169,7 +185,8 @@ export function LecturerAssignmentsPage() {
     },
   });
   const deleteAssignment = useMutation({
-    mutationFn: (assignmentId: string) => apiRequest(`/assignments/${assignmentId}`, { method: "DELETE" }),
+    mutationFn: (assignmentId: string) =>
+      apiRequest(`/assignments/${assignmentId}`, { method: "DELETE" }),
     onSuccess: async () => {
       setSelectedAssignmentId("");
       setEditingAssignment(null);
@@ -178,12 +195,14 @@ export function LecturerAssignmentsPage() {
   });
 
   const assignments = assignmentsQuery.data?.data.items ?? [];
-  const selectedAssignment = assignments.find((assignment) => assignment.id === selectedAssignmentId) ?? null;
+  const selectedAssignment =
+    assignments.find((assignment) => assignment.id === selectedAssignmentId) ?? null;
   const submissionsQuery = useQuery({
     queryKey: ["assignment-submissions", selectedAssignmentId, submissionStatus],
-    queryFn: () => apiRequest<ApiEnvelope<PageResult<Submission>>>(
-      `/assignments/${selectedAssignmentId}/submissions?pageSize=100${submissionStatus ? `&status=${submissionStatus}` : ""}`,
-    ),
+    queryFn: () =>
+      apiRequest<ApiEnvelope<PageResult<Submission>>>(
+        `/assignments/${selectedAssignmentId}/submissions?pageSize=100${submissionStatus ? `&status=${submissionStatus}` : ""}`,
+      ),
     enabled: Boolean(selectedAssignmentId),
   });
 
@@ -195,16 +214,22 @@ export function LecturerAssignmentsPage() {
       title="Tugas & penilaian"
       description="Buat tugas untuk kelas yang diampu, tinjau submission, lalu beri nilai dan feedback."
     >
-      {classes.length === 0 ? <EmptyState message="Belum ada kelas yang diampu." /> : (
+      {classes.length === 0 ? (
+        <EmptyState message="Belum ada kelas yang diampu." />
+      ) : (
         <>
           <Panel title="Pilih kelas">
             <label className="block text-sm font-medium text-slate-700">
               Kelas
-              <select value={classId} onChange={(event) => {
-                setClassId(event.target.value);
-                setSelectedAssignmentId("");
-                setEditingAssignment(null);
-              }} className={inputClassName}>
+              <select
+                value={classId}
+                onChange={(event) => {
+                  setClassId(event.target.value);
+                  setSelectedAssignmentId("");
+                  setEditingAssignment(null);
+                }}
+                className={inputClassName}
+              >
                 {classes.map((section) => (
                   <option key={section.id} value={section.id}>
                     {section.course.code} · Kelas {section.name} · {section.semester.name}
@@ -217,21 +242,43 @@ export function LecturerAssignmentsPage() {
             <Panel title={editingAssignment ? "Ubah tugas" : "Buat tugas"}>
               {createAssignment.error && <ErrorBanner message={createAssignment.error.message} />}
               {deleteAssignment.error && <ErrorBanner message={deleteAssignment.error.message} />}
-              <form className="space-y-3" onSubmit={createForm.handleSubmit((values) => createAssignment.mutate(values))}>
+              <form
+                className="space-y-3"
+                onSubmit={createForm.handleSubmit((values) => createAssignment.mutate(values))}
+              >
                 <Field label="Judul" error={createForm.formState.errors.title?.message}>
                   <input {...createForm.register("title")} className={inputClassName} />
                 </Field>
                 <Field label="Deskripsi" error={createForm.formState.errors.description?.message}>
-                  <textarea rows={3} {...createForm.register("description")} className={inputClassName} />
+                  <textarea
+                    rows={3}
+                    {...createForm.register("description")}
+                    className={inputClassName}
+                  />
                 </Field>
                 <Field label="Deadline" error={createForm.formState.errors.deadline?.message}>
-                  <input type="datetime-local" {...createForm.register("deadline")} className={inputClassName} />
+                  <input
+                    type="datetime-local"
+                    {...createForm.register("deadline")}
+                    className={inputClassName}
+                  />
                 </Field>
                 <Field label="Nilai maksimal" error={createForm.formState.errors.maxScore?.message}>
-                  <input type="number" min="1" max="1000" {...createForm.register("maxScore")} className={inputClassName} />
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    {...createForm.register("maxScore")}
+                    className={inputClassName}
+                  />
                 </Field>
-                <Field label="Lampiran opsional (PDF/PNG/JPEG, maks. 10 MB)" error={createForm.formState.errors.file?.message}>
-                  <input type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                <Field
+                  label="Lampiran opsional (PDF/PNG/JPEG, maks. 10 MB)"
+                  error={createForm.formState.errors.file?.message}
+                >
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
                     className="mt-1 block w-full text-sm text-slate-600"
                     onChange={(event) => {
                       const file = event.target.files?.[0];
@@ -239,7 +286,8 @@ export function LecturerAssignmentsPage() {
                       if (file) {
                         createForm.setValue("removeAttachment", false);
                       }
-                    }} />
+                    }}
+                  />
                 </Field>
                 {editingAssignment?.attachmentFileName && (
                   <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -252,54 +300,87 @@ export function LecturerAssignmentsPage() {
                   Terima submission terlambat dengan penanda
                 </label>
                 <button disabled={createAssignment.isPending} className={primaryButton}>
-                  {createAssignment.isPending ? "Menyimpan..." : editingAssignment ? "Simpan perubahan" : "Buat tugas"}
+                  {createAssignment.isPending
+                    ? "Menyimpan..."
+                    : editingAssignment
+                      ? "Simpan perubahan"
+                      : "Buat tugas"}
                 </button>
                 {editingAssignment && (
-                  <button type="button" className={smallButton} onClick={() => {
-                    setEditingAssignment(null);
-                    createForm.reset({
-                      title: "",
-                      description: "",
-                      deadline: localDateTimeValue(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
-                      maxScore: 100,
-                      allowLate: false,
-                      removeAttachment: false,
-                    });
-                  }}>Batal ubah</button>
+                  <button
+                    type="button"
+                    className={smallButton}
+                    onClick={() => {
+                      setEditingAssignment(null);
+                      createForm.reset({
+                        title: "",
+                        description: "",
+                        deadline: localDateTimeValue(
+                          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                        ),
+                        maxScore: 100,
+                        allowLate: false,
+                        removeAttachment: false,
+                      });
+                    }}
+                  >
+                    Batal ubah
+                  </button>
                 )}
               </form>
             </Panel>
 
             <Panel title="Daftar tugas">
-              {assignmentsQuery.isLoading ? <LoadingState /> : assignmentsQuery.error ? (
+              {assignmentsQuery.isLoading ? (
+                <LoadingState />
+              ) : assignmentsQuery.error ? (
                 <ErrorBanner message={assignmentsQuery.error.message} />
-              ) : assignments.length === 0 ? <EmptyState message="Belum ada tugas pada kelas ini." /> : (
+              ) : assignments.length === 0 ? (
+                <EmptyState message="Belum ada tugas pada kelas ini." />
+              ) : (
                 <ul className="divide-y divide-slate-100">
                   {assignments.map((assignment) => (
-                    <li key={assignment.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <li
+                      key={assignment.id}
+                      className="flex flex-wrap items-center justify-between gap-3 py-3"
+                    >
                       <div>
                         <strong className="text-slate-900">{assignment.title}</strong>
                         <p className="text-sm text-slate-600">
-                          Deadline {formatDate(assignment.deadline)} · Maks. {assignment.maxScore} · {assignment._count?.submissions ?? 0} submission
+                          Deadline {formatDate(assignment.deadline)} · Maks. {assignment.maxScore} ·{" "}
+                          {assignment._count?.submissions ?? 0} submission
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                      <button className={smallButton} onClick={() => setSelectedAssignmentId(assignment.id)}>
-                        Lihat & nilai
-                      </button>
-                      <button className={smallButton} onClick={() => {
-                        setEditingAssignment(assignment);
-                        createForm.reset({
-                          title: assignment.title,
-                          description: assignment.description ?? "",
-                          deadline: localDateTimeValue(new Date(assignment.deadline)),
-                          maxScore: assignment.maxScore,
-                          allowLate: assignment.allowLate,
-                          removeAttachment: false,
-                        });
-                      }}>Ubah</button>
-                      <button className={smallButton} disabled={deleteAssignment.isPending}
-                        onClick={() => deleteAssignment.mutate(assignment.id)}>Hapus</button>
+                        <button
+                          className={smallButton}
+                          onClick={() => setSelectedAssignmentId(assignment.id)}
+                        >
+                          Lihat & nilai
+                        </button>
+                        <button
+                          className={smallButton}
+                          onClick={() => {
+                            setEditingAssignment(assignment);
+                            createForm.reset({
+                              title: assignment.title,
+                              description: assignment.description ?? "",
+                              deadline: localDateTimeValue(new Date(assignment.deadline)),
+                              maxScore: assignment.maxScore,
+                              allowLate: assignment.allowLate,
+                              removeAttachment: false,
+                            });
+                          }}
+                        >
+                          Ubah
+                        </button>
+                        <button
+                          className={smallButton}
+                          disabled={deleteAssignment.isPending}
+                          onClick={() => deleteAssignment.mutate(assignment.id)}
+                        >
+                          Hapus
+                        </button>
                       </div>
                     </li>
                   ))}
@@ -312,15 +393,21 @@ export function LecturerAssignmentsPage() {
             <Panel title={`Submission: ${selectedAssignment.title}`} className="mt-6">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-slate-600">Batas nilai: {selectedAssignment.maxScore}</p>
-                <select aria-label="Filter status submission" value={submissionStatus}
-                  onChange={(event) => setSubmissionStatus(event.target.value)} className={inputClassName}>
+                <select
+                  aria-label="Filter status submission"
+                  value={submissionStatus}
+                  onChange={(event) => setSubmissionStatus(event.target.value)}
+                  className={inputClassName}
+                >
                   <option value="">Semua status</option>
                   <option value="SUBMITTED">Sudah dikumpulkan</option>
                   <option value="LATE">Terlambat</option>
                   <option value="GRADED">Sudah dinilai</option>
                 </select>
               </div>
-              {submissionsQuery.isLoading ? <LoadingState /> : submissionsQuery.error ? (
+              {submissionsQuery.isLoading ? (
+                <LoadingState />
+              ) : submissionsQuery.error ? (
                 <ErrorBanner message={submissionsQuery.error.message} />
               ) : (submissionsQuery.data?.data.items.length ?? 0) === 0 ? (
                 <EmptyState message="Belum ada submission untuk filter ini." />
@@ -332,8 +419,12 @@ export function LecturerAssignmentsPage() {
                       assignment={selectedAssignment}
                       submission={submission}
                       onGraded={() => {
-                        void queryClient.invalidateQueries({ queryKey: ["assignment-submissions", selectedAssignment.id] });
-                        void queryClient.invalidateQueries({ queryKey: ["assignments", "lecturer", classId] });
+                        void queryClient.invalidateQueries({
+                          queryKey: ["assignment-submissions", selectedAssignment.id],
+                        });
+                        void queryClient.invalidateQueries({
+                          queryKey: ["assignments", "lecturer", classId],
+                        });
                       }}
                     />
                   ))}
@@ -371,48 +462,67 @@ function GradeSubmission({
     });
   }, [reset, submission.feedback, submission.score]);
   const grade = useMutation({
-    mutationFn: (values: GradeFormValues) => apiRequest(
-      `/assignments/${assignment.id}/submissions/${submission.id}/grade`,
-      { method: "PATCH", body: JSON.stringify(values) },
-    ),
+    mutationFn: (values: GradeFormValues) =>
+      apiRequest(`/assignments/${assignment.id}/submissions/${submission.id}/grade`, {
+        method: "PATCH",
+        body: JSON.stringify(values),
+      }),
     onSuccess: onGraded,
   });
   const download = useMutation({
-    mutationFn: () => downloadFile(
-      `/assignments/${assignment.id}/submissions/${submission.id}/file`,
-      submission.fileName ?? "submission",
-    ),
+    mutationFn: () =>
+      downloadFile(
+        `/assignments/${assignment.id}/submissions/${submission.id}/file`,
+        submission.fileName ?? "submission",
+      ),
   });
   const downloadVersion = useMutation({
-    mutationFn: (version: SubmissionVersion) => downloadFile(
-      `/assignments/${assignment.id}/submissions/${submission.id}/versions/${version.id}/file`,
-      version.fileName ?? "submission-version",
-    ),
+    mutationFn: (version: SubmissionVersion) =>
+      downloadFile(
+        `/assignments/${assignment.id}/submissions/${submission.id}/versions/${version.id}/file`,
+        version.fileName ?? "submission-version",
+      ),
   });
   return (
     <article className="rounded-xl border border-slate-200 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <strong>{submission.student?.name}</strong>
-          <p className="text-sm text-slate-500">{submission.student?.email} · {formatDate(submission.submittedAt)}</p>
-          <p className="mt-1 text-xs font-semibold text-amber-700">{submission.isLate ? "Terlambat" : "Tepat waktu"} · versi {submission.version}</p>
+          <p className="text-sm text-slate-500">
+            {submission.student?.email} · {formatDate(submission.submittedAt)}
+          </p>
+          <p className="mt-1 text-xs font-semibold text-amber-700">
+            {submission.isLate ? "Terlambat" : "Tepat waktu"} · versi {submission.version}
+          </p>
         </div>
         {submission.fileName && (
-          <button className={smallButton} disabled={download.isPending} onClick={() => download.mutate()}>
+          <button
+            className={smallButton}
+            disabled={download.isPending}
+            onClick={() => download.mutate()}
+          >
             {download.isPending ? "Mengunduh..." : `Unduh ${submission.fileName}`}
           </button>
         )}
       </div>
-      {submission.textContent && <p className="my-3 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{submission.textContent}</p>}
+      {submission.textContent && (
+        <p className="my-3 whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+          {submission.textContent}
+        </p>
+      )}
       {submission.versions && (
         <details className="my-3 text-sm text-slate-600">
           <summary className="cursor-pointer">Riwayat {submission.versions.length} versi</summary>
           <ul className="mt-2 space-y-1">
             {submission.versions.map((version) => (
               <li key={version.version}>
-                v{version.version} · {formatDate(version.submittedAt)} {version.isLate ? "· Terlambat" : ""}
+                v{version.version} · {formatDate(version.submittedAt)}{" "}
+                {version.isLate ? "· Terlambat" : ""}
                 {version.fileName && (
-                  <button className={`${smallButton} ml-2`} onClick={() => downloadVersion.mutate(version)}>
+                  <button
+                    className={`${smallButton} ml-2`}
+                    onClick={() => downloadVersion.mutate(version)}
+                  >
                     Unduh {version.fileName}
                   </button>
                 )}
@@ -424,17 +534,32 @@ function GradeSubmission({
       {grade.error && <ErrorBanner message={grade.error.message} />}
       {download.error && <ErrorBanner message={download.error.message} />}
       {downloadVersion.error && <ErrorBanner message={downloadVersion.error.message} />}
-      <form className="mt-3 grid gap-3 sm:grid-cols-[120px_1fr_auto]"
-        onSubmit={form.handleSubmit((values) => grade.mutate(values))}>
-        <Field label={`Nilai / ${assignment.maxScore}`} error={form.formState.errors.score?.message}>
-          <input type="number" min="0" max={assignment.maxScore} step="0.01"
-            {...form.register("score")} className={inputClassName} />
+      <form
+        className="mt-3 grid gap-3 sm:grid-cols-[120px_1fr_auto]"
+        onSubmit={form.handleSubmit((values) => grade.mutate(values))}
+      >
+        <Field
+          label={`Nilai / ${assignment.maxScore}`}
+          error={form.formState.errors.score?.message}
+        >
+          <input
+            type="number"
+            min="0"
+            max={assignment.maxScore}
+            step="0.01"
+            {...form.register("score")}
+            className={inputClassName}
+          />
         </Field>
         <Field label="Feedback" error={form.formState.errors.feedback?.message}>
           <input {...form.register("feedback")} className={inputClassName} />
         </Field>
         <button disabled={grade.isPending} className={`${primaryButton} self-end`}>
-          {grade.isPending ? "Menyimpan..." : submission.score === null ? "Beri nilai" : "Ubah nilai"}
+          {grade.isPending
+            ? "Menyimpan..."
+            : submission.score === null
+              ? "Beri nilai"
+              : "Ubah nilai"}
         </button>
       </form>
     </article>
@@ -451,9 +576,10 @@ export function StudentAssignmentsPage() {
   const classes = classesQuery.data?.data.items ?? [];
   const assignmentsQuery = useQuery({
     queryKey: ["assignments", "student", classId, status],
-    queryFn: () => apiRequest<ApiEnvelope<PageResult<Assignment>>>(
-      `/assignments?pageSize=100${classId ? `&classId=${classId}` : ""}${status ? `&status=${status}` : ""}`,
-    ),
+    queryFn: () =>
+      apiRequest<ApiEnvelope<PageResult<Assignment>>>(
+        `/assignments?pageSize=100${classId ? `&classId=${classId}` : ""}${status ? `&status=${status}` : ""}`,
+      ),
   });
   if (classesQuery.isLoading) return <LoadingState />;
   if (classesQuery.error) return <ErrorState message={classesQuery.error.message} />;
@@ -467,14 +593,26 @@ export function StudentAssignmentsPage() {
       <div className="mb-6 grid gap-3 sm:grid-cols-2">
         <label className="block text-sm font-medium text-slate-700">
           Kelas
-          <select value={classId} onChange={(event) => setClassId(event.target.value)} className={inputClassName}>
+          <select
+            value={classId}
+            onChange={(event) => setClassId(event.target.value)}
+            className={inputClassName}
+          >
             <option value="">Semua kelas</option>
-            {classes.map((section) => <option key={section.id} value={section.id}>{section.course.code} · {section.name}</option>)}
+            {classes.map((section) => (
+              <option key={section.id} value={section.id}>
+                {section.course.code} · {section.name}
+              </option>
+            ))}
           </select>
         </label>
         <label className="block text-sm font-medium text-slate-700">
           Status
-          <select value={status} onChange={(event) => setStatus(event.target.value)} className={inputClassName}>
+          <select
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+            className={inputClassName}
+          >
             <option value="">Semua status</option>
             <option value="NOT_SUBMITTED">Belum dikumpulkan</option>
             <option value="SUBMITTED">Sudah dikumpulkan</option>
@@ -483,9 +621,13 @@ export function StudentAssignmentsPage() {
           </select>
         </label>
       </div>
-      {assignmentsQuery.isLoading ? <LoadingState /> : assignmentsQuery.error ? (
+      {assignmentsQuery.isLoading ? (
+        <LoadingState />
+      ) : assignmentsQuery.error ? (
         <ErrorState message={assignmentsQuery.error.message} />
-      ) : assignments.length === 0 ? <EmptyState message="Tidak ada tugas untuk filter ini." /> : (
+      ) : assignments.length === 0 ? (
+        <EmptyState message="Tidak ada tugas untuk filter ini." />
+      ) : (
         <div className="space-y-5">
           {assignments.map((assignment) => (
             <StudentAssignmentCard key={assignment.id} assignment={assignment} />
@@ -493,7 +635,9 @@ export function StudentAssignmentsPage() {
         </div>
       )}
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
-        {classes.map((section) => <GradeSummary key={section.id} section={section} />)}
+        {classes.map((section) => (
+          <GradeSummary key={section.id} section={section} />
+        ))}
       </div>
     </PageShell>
   );
@@ -505,9 +649,10 @@ function StudentAssignmentCard({ assignment }: { assignment: Assignment }) {
   const submission = assignment.submissions?.[0];
   const historyQuery = useQuery({
     queryKey: ["my-submission", assignment.id],
-    queryFn: () => apiRequest<ApiEnvelope<{ submission: Submission | null }>>(
-      `/assignments/${assignment.id}/submissions/me`,
-    ),
+    queryFn: () =>
+      apiRequest<ApiEnvelope<{ submission: Submission | null }>>(
+        `/assignments/${assignment.id}/submissions/me`,
+      ),
     enabled: showHistory,
   });
   const form = useForm<SubmissionFormInput, unknown, SubmissionFormValues>({
@@ -530,22 +675,22 @@ function StudentAssignmentCard({ assignment }: { assignment: Assignment }) {
     },
   });
   const attachment = useMutation({
-    mutationFn: () => downloadFile(
-      `/assignments/${assignment.id}/attachment`,
-      assignment.attachmentFileName ?? "assignment",
-    ),
+    mutationFn: () =>
+      downloadFile(
+        `/assignments/${assignment.id}/attachment`,
+        assignment.attachmentFileName ?? "assignment",
+      ),
   });
   const submissionDownload = useMutation({
-    mutationFn: (fileName: string) => downloadFile(
-      `/assignments/${assignment.id}/submissions/${submission?.id}/file`,
-      fileName,
-    ),
+    mutationFn: (fileName: string) =>
+      downloadFile(`/assignments/${assignment.id}/submissions/${submission?.id}/file`, fileName),
   });
   const submissionVersionDownload = useMutation({
-    mutationFn: (version: SubmissionVersion) => downloadFile(
-      `/assignments/${assignment.id}/submissions/${submission?.id}/versions/${version.id}/file`,
-      version.fileName ?? "submission-version",
-    ),
+    mutationFn: (version: SubmissionVersion) =>
+      downloadFile(
+        `/assignments/${assignment.id}/submissions/${submission?.id}/versions/${version.id}/file`,
+        version.fileName ?? "submission-version",
+      ),
   });
   const remaining = new Date(assignment.deadline).getTime() - Date.now();
   const canResubmit = remaining > 0 || (!submission && assignment.allowLate);
@@ -553,73 +698,132 @@ function StudentAssignmentCard({ assignment }: { assignment: Assignment }) {
   return (
     <Panel title={assignment.title}>
       <p className="text-sm text-slate-600">
-        {assignment.section.course.code} · Kelas {assignment.section.name} · Maks. {assignment.maxScore}
+        {assignment.section.course.code} · Kelas {assignment.section.name} · Maks.{" "}
+        {assignment.maxScore}
       </p>
-      {assignment.description && <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{assignment.description}</p>}
-      <p className={`mt-3 text-sm font-semibold ${remaining < 0 ? "text-red-700" : "text-indigo-700"}`}>
+      {assignment.description && (
+        <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{assignment.description}</p>
+      )}
+      <p
+        className={`mt-3 text-sm font-semibold ${remaining < 0 ? "text-red-700" : "text-indigo-700"}`}
+      >
         Deadline: {formatDate(assignment.deadline)} · <Countdown deadline={assignment.deadline} />
       </p>
-      <p className="mt-1 text-sm font-semibold text-slate-700">Status: {statusLabel(assignment.studentStatus)}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-700">
+        Status: {statusLabel(assignment.studentStatus)}
+      </p>
       {submission && (
         <div className="mt-3 rounded-lg bg-slate-50 p-3 text-sm">
-          <p>Versi {submission.version} dikirim {formatDate(submission.submittedAt)}{submission.isLate ? " · Terlambat" : ""}</p>
-          {submission.score !== null && <p className="mt-1 font-semibold">Nilai {submission.score}/{assignment.maxScore}</p>}
-          {submission.feedback && <p className="mt-1 text-slate-600">Feedback: {submission.feedback}</p>}
+          <p>
+            Versi {submission.version} dikirim {formatDate(submission.submittedAt)}
+            {submission.isLate ? " · Terlambat" : ""}
+          </p>
+          {submission.score !== null && (
+            <p className="mt-1 font-semibold">
+              Nilai {submission.score}/{assignment.maxScore}
+            </p>
+          )}
+          {submission.feedback && (
+            <p className="mt-1 text-slate-600">Feedback: {submission.feedback}</p>
+          )}
           {submission.fileName && (
-            <button className={`${smallButton} mt-2`} onClick={() => submissionDownload.mutate(submission.fileName!)}>
+            <button
+              className={`${smallButton} mt-2`}
+              onClick={() => submissionDownload.mutate(submission.fileName!)}
+            >
               Unduh submission
             </button>
           )}
         </div>
       )}
       {assignment.attachmentFileName && (
-        <button className={`${smallButton} mt-3`} disabled={attachment.isPending} onClick={() => attachment.mutate()}>
-          {attachment.isPending ? "Mengunduh..." : `Unduh lampiran ${assignment.attachmentFileName}`}
+        <button
+          className={`${smallButton} mt-3`}
+          disabled={attachment.isPending}
+          onClick={() => attachment.mutate()}
+        >
+          {attachment.isPending
+            ? "Mengunduh..."
+            : `Unduh lampiran ${assignment.attachmentFileName}`}
         </button>
       )}
-      <button className={`${smallButton} mt-3`} onClick={() => setShowHistory((visible) => !visible)}>
+      <button
+        className={`${smallButton} mt-3`}
+        onClick={() => setShowHistory((visible) => !visible)}
+      >
         {showHistory ? "Sembunyikan riwayat" : "Lihat riwayat & audit nilai"}
       </button>
       {showHistory && (
         <div className="mt-3">
-          {historyQuery.isLoading ? <p className="text-sm text-slate-500">Memuat riwayat...</p> : historyQuery.error ? (
+          {historyQuery.isLoading ? (
+            <p className="text-sm text-slate-500">Memuat riwayat...</p>
+          ) : historyQuery.error ? (
             <ErrorBanner message={historyQuery.error.message} />
           ) : historyQuery.data?.data.submission ? (
             <div className="space-y-2 text-sm text-slate-600">
               {historyQuery.data.data.submission.versions?.map((version) => (
                 <p key={version.version}>
-                  Versi {version.version} · {formatDate(version.submittedAt)}{version.isLate ? " · Terlambat" : ""}
+                  Versi {version.version} · {formatDate(version.submittedAt)}
+                  {version.isLate ? " · Terlambat" : ""}
                   {version.fileName && (
-                    <button className={`${smallButton} ml-2`} onClick={() => submissionVersionDownload.mutate(version)}>
+                    <button
+                      className={`${smallButton} ml-2`}
+                      onClick={() => submissionVersionDownload.mutate(version)}
+                    >
                       Unduh {version.fileName}
                     </button>
                   )}
                 </p>
               ))}
-              {historyQuery.data.data.submission.gradeHistory?.map((audit: {
-                id: string; score: string | number; previousScore: string | number | null; gradedAt: string; grader: { name: string };
-              }) => (
-                <p key={audit.id}>Nilai {audit.previousScore ?? "belum dinilai"} → {audit.score} oleh {audit.grader.name} · {formatDate(audit.gradedAt)}</p>
-              ))}
+              {historyQuery.data.data.submission.gradeHistory?.map(
+                (audit: {
+                  id: string;
+                  score: string | number;
+                  previousScore: string | number | null;
+                  gradedAt: string;
+                  grader: { name: string };
+                }) => (
+                  <p key={audit.id}>
+                    Nilai {audit.previousScore ?? "belum dinilai"} → {audit.score} oleh{" "}
+                    {audit.grader.name} · {formatDate(audit.gradedAt)}
+                  </p>
+                ),
+              )}
             </div>
-          ) : <p className="text-sm text-slate-500">Belum ada submission.</p>}
+          ) : (
+            <p className="text-sm text-slate-500">Belum ada submission.</p>
+          )}
         </div>
       )}
       {submit.error && <ErrorBanner message={submit.error.message} />}
       {attachment.error && <ErrorBanner message={attachment.error.message} />}
       {submissionDownload.error && <ErrorBanner message={submissionDownload.error.message} />}
-      {submissionVersionDownload.error && <ErrorBanner message={submissionVersionDownload.error.message} />}
+      {submissionVersionDownload.error && (
+        <ErrorBanner message={submissionVersionDownload.error.message} />
+      )}
       {canResubmit && (
-        <form className="mt-4 space-y-3 border-t border-slate-100 pt-4"
-          onSubmit={form.handleSubmit((values) => submit.mutate(values))}>
-          <Field label={submission ? "Kirim versi baru (teks)" : "Jawaban teks"}
-            error={form.formState.errors.textContent?.message}>
+        <form
+          className="mt-4 space-y-3 border-t border-slate-100 pt-4"
+          onSubmit={form.handleSubmit((values) => submit.mutate(values))}
+        >
+          <Field
+            label={submission ? "Kirim versi baru (teks)" : "Jawaban teks"}
+            error={form.formState.errors.textContent?.message}
+          >
             <textarea rows={4} {...form.register("textContent")} className={inputClassName} />
           </Field>
-          <Field label="File opsional (PDF/PNG/JPEG, maks. 10 MB)" error={form.formState.errors.file?.message}>
-            <input type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+          <Field
+            label="File opsional (PDF/PNG/JPEG, maks. 10 MB)"
+            error={form.formState.errors.file?.message}
+          >
+            <input
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
               className="mt-1 block w-full text-sm text-slate-600"
-              onChange={(event) => form.setValue("file", event.target.files?.[0], { shouldValidate: true })} />
+              onChange={(event) =>
+                form.setValue("file", event.target.files?.[0], { shouldValidate: true })
+              }
+            />
           </Field>
           <button disabled={submit.isPending} className={primaryButton}>
             {submit.isPending ? "Mengirim..." : submission ? "Kirim versi baru" : "Kirim tugas"}
@@ -633,18 +837,41 @@ function StudentAssignmentCard({ assignment }: { assignment: Assignment }) {
 function GradeSummary({ section }: { section: ClassSection }) {
   const query = useQuery({
     queryKey: ["grade-summary", section.id],
-    queryFn: () => apiRequest<ApiEnvelope<{
-      summary: { totalAssignments: number; gradedAssignments: number; earnedScore: number; possibleScore: number; averagePercentage: number | null };
-    }>>(`/classes/${section.id}/grades/me`),
+    queryFn: () =>
+      apiRequest<
+        ApiEnvelope<{
+          summary: {
+            totalAssignments: number;
+            gradedAssignments: number;
+            earnedScore: number;
+            possibleScore: number;
+            averagePercentage: number | null;
+          };
+        }>
+      >(`/classes/${section.id}/grades/me`),
   });
-  if (query.isLoading) return <Panel title={`${section.course.code} · Nilai`}><LoadingState /></Panel>;
-  if (query.error) return <Panel title={`${section.course.code} · Nilai`}><ErrorBanner message={query.error.message} /></Panel>;
+  if (query.isLoading)
+    return (
+      <Panel title={`${section.course.code} · Nilai`}>
+        <LoadingState />
+      </Panel>
+    );
+  if (query.error)
+    return (
+      <Panel title={`${section.course.code} · Nilai`}>
+        <ErrorBanner message={query.error.message} />
+      </Panel>
+    );
   const summary = query.data?.data.summary;
   return (
     <Panel title={`${section.course.code} · Ringkasan nilai`}>
-      {!summary || summary.totalAssignments === 0 ? <p className="text-sm text-slate-500">Belum ada tugas.</p> : (
+      {!summary || summary.totalAssignments === 0 ? (
+        <p className="text-sm text-slate-500">Belum ada tugas.</p>
+      ) : (
         <p className="text-sm text-slate-700">
-          {summary.gradedAssignments}/{summary.totalAssignments} tugas dinilai · {summary.earnedScore}/{summary.possibleScore} poin · Rata-rata {summary.averagePercentage ?? "—"}%
+          {summary.gradedAssignments}/{summary.totalAssignments} tugas dinilai ·{" "}
+          {summary.earnedScore}/{summary.possibleScore} poin · Rata-rata{" "}
+          {summary.averagePercentage ?? "—"}%
         </p>
       )}
     </Panel>
@@ -664,15 +891,31 @@ function Countdown({ deadline }: { deadline: string }) {
   const hours = Math.floor((totalSeconds % 86_400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  return <>{days} hari {hours} jam {minutes} menit {seconds} detik lagi</>;
+  return (
+    <>
+      {days} hari {hours} jam {minutes} menit {seconds} detik lagi
+    </>
+  );
 }
 
-function PageShell({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+function PageShell({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-6 py-10">
-      <Link to="/dashboard" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">← Dashboard</Link>
+      <Link to="/dashboard" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+        ← Dashboard
+      </Link>
       <header className="my-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">CampusHub</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">
+          CampusHub
+        </p>
         <h1 className="mt-2 text-3xl font-bold text-slate-900">{title}</h1>
         <p className="mt-2 text-slate-600">{description}</p>
       </header>
@@ -681,16 +924,31 @@ function PageShell({ title, description, children }: { title: string; descriptio
   );
 }
 
-function Panel({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
-  return <section className={`rounded-2xl border border-slate-200 bg-white p-6 shadow-sm ${className}`}>
-    <h2 className="mb-5 text-lg font-semibold text-slate-900">{title}</h2>{children}
-  </section>;
+function Panel({
+  title,
+  children,
+  className = "",
+}: {
+  title: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`rounded-2xl border border-slate-200 bg-white p-6 shadow-sm ${className}`}>
+      <h2 className="mb-5 text-lg font-semibold text-slate-900">{title}</h2>
+      {children}
+    </section>
+  );
 }
 
 function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
-  return <label className="block text-sm font-medium text-slate-700">{label}{children}
-    {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
-  </label>;
+  return (
+    <label className="block text-sm font-medium text-slate-700">
+      {label}
+      {children}
+      {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
+    </label>
+  );
 }
 
 function LoadingState() {
@@ -702,11 +960,19 @@ function EmptyState({ message }: { message: string }) {
 }
 
 function ErrorState({ message }: { message: string }) {
-  return <main className="mx-auto max-w-5xl px-6 py-12"><ErrorBanner message={message} /></main>;
+  return (
+    <main className="mx-auto max-w-5xl px-6 py-12">
+      <ErrorBanner message={message} />
+    </main>
+  );
 }
 
 function ErrorBanner({ message }: { message: string }) {
-  return <p role="alert" className="my-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{message}</p>;
+  return (
+    <p role="alert" className="my-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      {message}
+    </p>
+  );
 }
 
 function formatDate(value: string) {
@@ -727,6 +993,9 @@ function statusLabel(status: Assignment["studentStatus"]): string {
   return "Belum dikumpulkan";
 }
 
-const inputClassName = "mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
-const primaryButton = "rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60";
-const smallButton = "rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50";
+const inputClassName =
+  "mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+const primaryButton =
+  "rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60";
+const smallButton =
+  "rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50";

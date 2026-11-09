@@ -7,7 +7,9 @@ export function ProtectedRoute({ roles }: { roles?: UserRole[] }) {
   const location = useLocation();
 
   if (isLoading) {
-    return <main className="grid min-h-screen place-items-center text-slate-600">Memuat sesi...</main>;
+    return (
+      <main className="grid min-h-screen place-items-center text-slate-600">Memuat sesi...</main>
+    );
   }
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
   if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />;

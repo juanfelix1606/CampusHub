@@ -39,11 +39,7 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const headers = new Headers(init.headers);
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
-  if (
-    init.body &&
-    !(init.body instanceof FormData) &&
-    !headers.has("Content-Type")
-  ) {
+  if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -62,9 +58,7 @@ export async function apiRequest<T>(
 
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(
-      getErrorMessage(payload) ?? `Request failed with status ${response.status}.`,
-    );
+    throw new Error(getErrorMessage(payload) ?? `Request failed with status ${response.status}.`);
   }
   return payload as T;
 }
@@ -88,9 +82,7 @@ export async function downloadFile(path: string, suggestedName: string): Promise
   }
   if (!response.ok) {
     const payload: unknown = await response.json().catch(() => null);
-    throw new Error(
-      getErrorMessage(payload) ?? `Request failed with status ${response.status}.`,
-    );
+    throw new Error(getErrorMessage(payload) ?? `Request failed with status ${response.status}.`);
   }
 
   const blob = await response.blob();

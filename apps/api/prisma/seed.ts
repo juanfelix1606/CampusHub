@@ -11,7 +11,9 @@ const prisma = new PrismaClient();
 async function main(): Promise<void> {
   const demoPassword = process.env.DEMO_PASSWORD;
   if (!demoPassword || demoPassword.length < 12) {
-    throw new Error("Set DEMO_PASSWORD to a throwaway password of at least 12 characters before seeding.");
+    throw new Error(
+      "Set DEMO_PASSWORD to a throwaway password of at least 12 characters before seeding.",
+    );
   }
 
   const passwordHash = await bcrypt.hash(demoPassword, 12);
@@ -233,9 +235,21 @@ async function main(): Promise<void> {
   });
 
   const attendanceSessions = [
-    { id: "00000000-0000-4000-8000-000000000601", title: "Pertemuan 1 - Pengantar RPL", daysAgo: 21 },
-    { id: "00000000-0000-4000-8000-000000000602", title: "Pertemuan 2 - Analisis Kebutuhan", daysAgo: 14 },
-    { id: "00000000-0000-4000-8000-000000000603", title: "Pertemuan 3 - Pemodelan Sistem", daysAgo: 7 },
+    {
+      id: "00000000-0000-4000-8000-000000000601",
+      title: "Pertemuan 1 - Pengantar RPL",
+      daysAgo: 21,
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000602",
+      title: "Pertemuan 2 - Analisis Kebutuhan",
+      daysAgo: 14,
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000603",
+      title: "Pertemuan 3 - Pemodelan Sistem",
+      daysAgo: 7,
+    },
   ];
   const attendanceBySession = [
     [AttendanceStatus.PRESENT, AttendanceStatus.LATE],

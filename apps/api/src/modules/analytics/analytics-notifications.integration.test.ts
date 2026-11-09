@@ -59,11 +59,41 @@ beforeAll(async () => {
   const passwordHash = await bcrypt.hash("Integration-only-password-123", 4);
   await prisma.user.createMany({
     data: [
-      { id: ids.admin, name: "Analytics Admin", email: `${marker}-admin@test.local`, passwordHash, role: "ADMIN" },
-      { id: ids.lecturer, name: "Analytics Lecturer", email: `${marker}-lecturer@test.local`, passwordHash, role: "LECTURER" },
-      { id: ids.otherLecturer, name: "Other Analytics Lecturer", email: `${marker}-other-lecturer@test.local`, passwordHash, role: "LECTURER" },
-      { id: ids.student, name: "=HYPERLINK(\"https://example.test\")", email: `${marker}-student@test.local`, passwordHash, role: "STUDENT" },
-      { id: ids.outsider, name: "Analytics Outsider", email: `${marker}-outsider@test.local`, passwordHash, role: "STUDENT" },
+      {
+        id: ids.admin,
+        name: "Analytics Admin",
+        email: `${marker}-admin@test.local`,
+        passwordHash,
+        role: "ADMIN",
+      },
+      {
+        id: ids.lecturer,
+        name: "Analytics Lecturer",
+        email: `${marker}-lecturer@test.local`,
+        passwordHash,
+        role: "LECTURER",
+      },
+      {
+        id: ids.otherLecturer,
+        name: "Other Analytics Lecturer",
+        email: `${marker}-other-lecturer@test.local`,
+        passwordHash,
+        role: "LECTURER",
+      },
+      {
+        id: ids.student,
+        name: '=HYPERLINK("https://example.test")',
+        email: `${marker}-student@test.local`,
+        passwordHash,
+        role: "STUDENT",
+      },
+      {
+        id: ids.outsider,
+        name: "Analytics Outsider",
+        email: `${marker}-outsider@test.local`,
+        passwordHash,
+        role: "STUDENT",
+      },
     ],
   });
   await prisma.semester.create({
@@ -76,7 +106,12 @@ beforeAll(async () => {
     },
   });
   await prisma.course.create({
-    data: { id: ids.course, code: `A${randomUUID().slice(0, 7).toUpperCase()}`, name: "Analytics Course", credits: 3 },
+    data: {
+      id: ids.course,
+      code: `A${randomUUID().slice(0, 7).toUpperCase()}`,
+      name: "Analytics Course",
+      credits: 3,
+    },
   });
   await prisma.classSection.create({
     data: {
@@ -168,10 +203,12 @@ describe("analytics, announcements, notifications, and grade export with Postgre
       total: 1,
       percentage: 100,
     });
-    expect(studentDashboard.body.data.upcomingAssignments.map((item: { id: string }) => item.id))
-      .toContain(ids.upcomingAssignment);
-    expect(studentDashboard.body.data.missingAssignments.map((item: { id: string }) => item.id))
-      .toContain(ids.missingAssignment);
+    expect(
+      studentDashboard.body.data.upcomingAssignments.map((item: { id: string }) => item.id),
+    ).toContain(ids.upcomingAssignment);
+    expect(
+      studentDashboard.body.data.missingAssignments.map((item: { id: string }) => item.id),
+    ).toContain(ids.missingAssignment);
     expect(studentDashboard.body.data.gradesByClass[0].average).toBe(80);
 
     const lecturerDashboard = await request(app)
@@ -183,9 +220,11 @@ describe("analytics, announcements, notifications, and grade export with Postgre
       PRESENT: 1,
       percentage: 100,
     });
-    expect(lecturerDashboard.body.data.assignmentAnalytics
-      .find((item: { assignmentId: string }) => item.assignmentId === ids.gradedAssignment)
-      .gradeDistribution.find((bucket: { range: string }) => bucket.range === "80–89").count).toBe(1);
+    expect(
+      lecturerDashboard.body.data.assignmentAnalytics
+        .find((item: { assignmentId: string }) => item.assignmentId === ids.gradedAssignment)
+        .gradeDistribution.find((bucket: { range: string }) => bucket.range === "80–89").count,
+    ).toBe(1);
     expect(lecturerDashboard.body.data.classes).toHaveLength(1);
 
     const unrelated = await request(app)
@@ -204,18 +243,24 @@ describe("analytics, announcements, notifications, and grade export with Postgre
       .get("/api/v1/dashboard")
       .set(bearer(ids.admin, UserRole.ADMIN))
       .expect(200);
-    expect(adminDashboard.body.data.usersByRole).toEqual(expect.arrayContaining([
-      expect.objectContaining({ role: "ADMIN" }),
-      expect.objectContaining({ role: "LECTURER" }),
-      expect.objectContaining({ role: "STUDENT" }),
-    ]));
+    expect(adminDashboard.body.data.usersByRole).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ role: "ADMIN" }),
+        expect.objectContaining({ role: "LECTURER" }),
+        expect.objectContaining({ role: "STUDENT" }),
+      ]),
+    );
   });
 
   it("limits announcements and notifications to their intended audience and owner", async () => {
     await request(app)
       .post("/api/v1/announcements")
       .set(bearer(ids.lecturer, UserRole.LECTURER))
-      .send({ sectionId: ids.section, title: "Class integration announcement", body: "For enrolled students only." })
+      .send({
+        sectionId: ids.section,
+        title: "Class integration announcement",
+        body: "For enrolled students only.",
+      })
       .expect(201);
     await request(app)
       .post("/api/v1/announcements")
@@ -225,7 +270,11 @@ describe("analytics, announcements, notifications, and grade export with Postgre
     await request(app)
       .post("/api/v1/announcements")
       .set(bearer(ids.otherLecturer, UserRole.LECTURER))
-      .send({ sectionId: ids.section, title: "Unauthorized announcement", body: "Must be rejected." })
+      .send({
+        sectionId: ids.section,
+        title: "Unauthorized announcement",
+        body: "Must be rejected.",
+      })
       .expect(403);
 
     const studentAnnouncements = await request(app)
@@ -303,12 +352,13 @@ describe("analytics, announcements, notifications, and grade export with Postgre
       .get("/api/v1/notifications?page=1&pageSize=100")
       .set(bearer(ids.student, UserRole.STUDENT))
       .expect(200);
-    expect(notices.body.data.items.map((item: { type: NotificationType }) => item.type))
-      .toEqual(expect.arrayContaining([
+    expect(notices.body.data.items.map((item: { type: NotificationType }) => item.type)).toEqual(
+      expect.arrayContaining([
         NotificationType.ASSIGNMENT,
         NotificationType.GRADE,
         NotificationType.ATTENDANCE,
-      ]));
+      ]),
+    );
 
     await request(app)
       .get(`/api/v1/classes/${ids.section}/grades/export.csv`)

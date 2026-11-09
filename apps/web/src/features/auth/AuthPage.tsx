@@ -27,10 +27,14 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
   const isRegister = mode === "register";
   const loginForm = useForm<LoginValues>({ resolver: zodResolver(loginSchema) });
   const registerForm = useForm<RegisterValues>({ resolver: zodResolver(registerSchema) });
-  const isSubmitting = isRegister ? registerForm.formState.isSubmitting : loginForm.formState.isSubmitting;
+  const isSubmitting = isRegister
+    ? registerForm.formState.isSubmitting
+    : loginForm.formState.isSubmitting;
 
   if (isLoading) {
-    return <main className="grid min-h-screen place-items-center text-slate-600">Memuat sesi...</main>;
+    return (
+      <main className="grid min-h-screen place-items-center text-slate-600">Memuat sesi...</main>
+    );
   }
   if (user) return <Navigate to="/dashboard" replace />;
 
@@ -64,7 +68,9 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
           {isRegister ? "Buat akun mahasiswa" : "Selamat datang kembali"}
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          {isRegister ? "Daftar untuk mulai menggunakan CampusHub." : "Masuk untuk melanjutkan ke kelasmu."}
+          {isRegister
+            ? "Daftar untuk mulai menggunakan CampusHub."
+            : "Masuk untuk melanjutkan ke kelasmu."}
         </p>
 
         {requestError && (
@@ -76,23 +82,47 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
         {isRegister ? (
           <form className="mt-6 space-y-4" onSubmit={submitRegister} noValidate>
             <FormField label="Nama" error={registerForm.formState.errors.name?.message}>
-              <input autoComplete="name" {...registerForm.register("name")} className={inputClassName} />
+              <input
+                autoComplete="name"
+                {...registerForm.register("name")}
+                className={inputClassName}
+              />
             </FormField>
             <FormField label="Email" error={registerForm.formState.errors.email?.message}>
-              <input type="email" autoComplete="email" {...registerForm.register("email")} className={inputClassName} />
+              <input
+                type="email"
+                autoComplete="email"
+                {...registerForm.register("email")}
+                className={inputClassName}
+              />
             </FormField>
             <FormField label="Password" error={registerForm.formState.errors.password?.message}>
-              <input type="password" autoComplete="new-password" {...registerForm.register("password")} className={inputClassName} />
+              <input
+                type="password"
+                autoComplete="new-password"
+                {...registerForm.register("password")}
+                className={inputClassName}
+              />
             </FormField>
             <SubmitButton busy={isSubmitting}>Daftar</SubmitButton>
           </form>
         ) : (
           <form className="mt-6 space-y-4" onSubmit={submitLogin} noValidate>
             <FormField label="Email" error={loginForm.formState.errors.email?.message}>
-              <input type="email" autoComplete="email" {...loginForm.register("email")} className={inputClassName} />
+              <input
+                type="email"
+                autoComplete="email"
+                {...loginForm.register("email")}
+                className={inputClassName}
+              />
             </FormField>
             <FormField label="Password" error={loginForm.formState.errors.password?.message}>
-              <input type="password" autoComplete="current-password" {...loginForm.register("password")} className={inputClassName} />
+              <input
+                type="password"
+                autoComplete="current-password"
+                {...loginForm.register("password")}
+                className={inputClassName}
+              />
             </FormField>
             <SubmitButton busy={isSubmitting}>Masuk</SubmitButton>
           </form>
@@ -100,7 +130,10 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
 
         <p className="mt-6 text-center text-sm text-slate-600">
           {isRegister ? "Sudah punya akun?" : "Belum punya akun?"}{" "}
-          <Link className="font-semibold text-indigo-600 hover:text-indigo-700" to={isRegister ? "/login" : "/register"}>
+          <Link
+            className="font-semibold text-indigo-600 hover:text-indigo-700"
+            to={isRegister ? "/login" : "/register"}
+          >
             {isRegister ? "Masuk" : "Daftar"}
           </Link>
         </p>

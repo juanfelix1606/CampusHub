@@ -54,24 +54,26 @@ Akun dan password tersebut hanya untuk development/demo lokal. Jangan gunakan pa
 
 ### Endpoint utama
 
-| Method | Path | Akses |
-|---|---|---|
-| `GET/POST` | `/api/v1/courses` | Semua role terautentikasi / Admin |
-| `PATCH/DELETE` | `/api/v1/courses/:courseId` | Admin |
-| `GET` | `/api/v1/classes`, `/mine`, `/semesters` | Semua role; hasil disaring per role |
-| `POST` | `/api/v1/classes` | Admin |
-| `PATCH/DELETE` | `/api/v1/classes/:classId` | Admin |
-| `POST/DELETE` | `/api/v1/classes/:classId/enrollments/me` | Mahasiswa |
-| `GET/POST` | `/api/v1/classes/:classId/materials` | Peserta kelas / Dosen pengampu |
-| `PATCH/DELETE` | `/api/v1/materials/:materialId` | Dosen pengampu |
-| `GET` | `/api/v1/materials/:materialId/download` | Peserta kelas, Dosen pengampu, Admin |
+| Method         | Path                                      | Akses                                |
+| -------------- | ----------------------------------------- | ------------------------------------ |
+| `GET/POST`     | `/api/v1/courses`                         | Semua role terautentikasi / Admin    |
+| `PATCH/DELETE` | `/api/v1/courses/:courseId`               | Admin                                |
+| `GET`          | `/api/v1/classes`, `/mine`, `/semesters`  | Semua role; hasil disaring per role  |
+| `POST`         | `/api/v1/classes`                         | Admin                                |
+| `PATCH/DELETE` | `/api/v1/classes/:classId`                | Admin                                |
+| `POST/DELETE`  | `/api/v1/classes/:classId/enrollments/me` | Mahasiswa                            |
+| `GET/POST`     | `/api/v1/classes/:classId/materials`      | Peserta kelas / Dosen pengampu       |
+| `PATCH/DELETE` | `/api/v1/materials/:materialId`           | Dosen pengampu                       |
+| `GET`          | `/api/v1/materials/:materialId/download`  | Peserta kelas, Dosen pengampu, Admin |
 
 ### Testing
 
 - Unit: `npm run test:unit`
 - Integration dengan PostgreSQL terpisah: mulai `docker compose --profile test up -d db-test`, pastikan `TEST_DATABASE_URL` menunjuk ke database bernama `*_test`, lalu `npm run test:integration`. Migrasi test dijalankan otomatis; suite menolak URL database yang tidak berakhiran `_test`.
+- Quality gates: `npm run lint` dan `npm run format:check`.
+- End-to-end: seed database test dengan `DEMO_PASSWORD` yang sama untuk akun demo, lalu jalankan `npm run test:e2e`. Playwright menguji dosen membuat tugas dan mahasiswa mengumpulkannya; browser Chromium perlu tersedia (`npx playwright install chromium`).
 - `npm test` menjalankan unit test saja. Integration test memodifikasi database khusus yang URL-nya disediakan; jangan arahkan ke database development/production. Suite mencakup repository Prisma dan constraint PostgreSQL.
-- Pull request dan push ke `main` menjalankan GitHub Actions: install, lint (jika dikonfigurasi), build, unit test, dan integration test dengan service PostgreSQL.
+- Pull request dan push ke `main` menjalankan GitHub Actions: install, lint, format check, build, unit test, integration test dengan service PostgreSQL, lalu E2E di database yang sama setelah seed akun demo khusus CI.
 
 ## Tugas, submission, dan penilaian (Fase 4)
 
@@ -116,19 +118,19 @@ sequenceDiagram
 
 ### Endpoint absensi utama
 
-| Method | Path | Akses |
-|---|---|---|
-| `POST` | `/api/v1/classes/:classId/attendance/sessions` | Dosen pengampu |
-| `GET` | `/api/v1/classes/:classId/attendance/sessions` | Dosen pengampu; paginasi |
-| `GET` | `/api/v1/attendance/sessions/:sessionId/qr` | Dosen pengampu |
-| `POST` | `/api/v1/attendance/sessions/:sessionId/close` | Dosen pengampu |
-| `GET` | `/api/v1/attendance/sessions/:sessionId/records` | Dosen pengampu; paginasi/filter status |
-| `PATCH` | `/api/v1/attendance/sessions/:sessionId/records/:studentId` | Dosen pengampu; audit perubahan |
-| `POST` | `/api/v1/attendance/check-in` | Mahasiswa terdaftar; rate-limited |
-| `GET` | `/api/v1/attendance/me` | Riwayat mahasiswa sendiri; paginasi/filter |
-| `GET` | `/api/v1/classes/:classId/attendance/me` | Mahasiswa terdaftar |
-| `GET` | `/api/v1/attendance/sessions/:sessionId/export.csv` | Dosen pengampu |
-| `GET` | `/api/v1/classes/:classId/attendance/export.csv` | Dosen pengampu |
+| Method  | Path                                                        | Akses                                      |
+| ------- | ----------------------------------------------------------- | ------------------------------------------ |
+| `POST`  | `/api/v1/classes/:classId/attendance/sessions`              | Dosen pengampu                             |
+| `GET`   | `/api/v1/classes/:classId/attendance/sessions`              | Dosen pengampu; paginasi                   |
+| `GET`   | `/api/v1/attendance/sessions/:sessionId/qr`                 | Dosen pengampu                             |
+| `POST`  | `/api/v1/attendance/sessions/:sessionId/close`              | Dosen pengampu                             |
+| `GET`   | `/api/v1/attendance/sessions/:sessionId/records`            | Dosen pengampu; paginasi/filter status     |
+| `PATCH` | `/api/v1/attendance/sessions/:sessionId/records/:studentId` | Dosen pengampu; audit perubahan            |
+| `POST`  | `/api/v1/attendance/check-in`                               | Mahasiswa terdaftar; rate-limited          |
+| `GET`   | `/api/v1/attendance/me`                                     | Riwayat mahasiswa sendiri; paginasi/filter |
+| `GET`   | `/api/v1/classes/:classId/attendance/me`                    | Mahasiswa terdaftar                        |
+| `GET`   | `/api/v1/attendance/sessions/:sessionId/export.csv`         | Dosen pengampu                             |
+| `GET`   | `/api/v1/classes/:classId/attendance/export.csv`            | Dosen pengampu                             |
 
 `ATTENDANCE_QR_SECRET` adalah secret terpisah dari access-token secret dan wajib tersedia pada API. Endpoint check-in dibatasi 60 request per menit per alamat IP. Scan kamera nyata perlu diverifikasi di perangkat melalui HTTPS/localhost; unit dan integration test memverifikasi token, otorisasi, konkurensi, expiry, audit, serta CSV.
 
@@ -142,19 +144,20 @@ sequenceDiagram
 - Halaman menggunakan `React.lazy`/`Suspense` agar bundle layar dan library QR/chart dipisah. UI menyediakan loading, empty, dan error state; halaman analitik juga menampilkan grafik Recharts.
 - Seed membuat pengumuman global/kelas dan notifikasi contoh untuk kedua akun mahasiswa. Bukti smoke test browser tersimpan di `docs/screenshots/`: dashboard tiap role, daftar notifikasi, dan sesi absensi QR.
 
-| Method | Path | Akses |
-|---|---|---|
-| `GET` | `/api/v1/dashboard` | Pengguna terautentikasi; data disesuaikan role |
-| `GET` | `/api/v1/announcements` | Pengguna terautentikasi; audiens dibatasi backend |
-| `POST` | `/api/v1/announcements` | Admin (global/kelas), dosen pengampu (kelas sendiri) |
-| `GET` | `/api/v1/notifications` | Pemilik notifikasi; paginasi dan unread count |
-| `PATCH` | `/api/v1/notifications/:notificationId/read` | Pemilik notifikasi |
-| `POST` | `/api/v1/notifications/read-all` | Pengguna saat ini |
-| `GET` | `/api/v1/classes/:classId/grades/export.csv` | Admin atau dosen pengampu |
+| Method  | Path                                         | Akses                                                |
+| ------- | -------------------------------------------- | ---------------------------------------------------- |
+| `GET`   | `/api/v1/dashboard`                          | Pengguna terautentikasi; data disesuaikan role       |
+| `GET`   | `/api/v1/announcements`                      | Pengguna terautentikasi; audiens dibatasi backend    |
+| `POST`  | `/api/v1/announcements`                      | Admin (global/kelas), dosen pengampu (kelas sendiri) |
+| `GET`   | `/api/v1/notifications`                      | Pemilik notifikasi; paginasi dan unread count        |
+| `PATCH` | `/api/v1/notifications/:notificationId/read` | Pemilik notifikasi                                   |
+| `POST`  | `/api/v1/notifications/read-all`             | Pengguna saat ini                                    |
+| `GET`   | `/api/v1/classes/:classId/grades/export.csv` | Admin atau dosen pengampu                            |
 
 ## Known issues
 
-- `npm audit --omit=dev` pada dependency Prisma 6 melaporkan tiga temuan high yang terkait Prisma/config dan `deepmerge-ts`. Perbaikan yang disarankan audit memerlukan migrasi major Prisma 7; upgrade ditunda agar tidak mencampur perubahan dependency major dengan fase fitur. Tinjau kembali advisories dan kompatibilitas migrasi sebelum deploy publik.
+- `npm audit --omit=dev` pada dependency Prisma 6 melaporkan tiga temuan high yang terkait Prisma/config dan `deepmerge-ts` (GHSA-ggr8-5vv4-36mx). Advisori `deepmerge-ts` menyebut risiko stack exhaustion pada graph objek rekursif; paket ini merupakan dependency tidak langsung Prisma. Perbaikan yang disarankan audit memerlukan migrasi major Prisma 7; upgrade ditunda agar perubahan major tidak dilakukan tanpa uji kompatibilitas. Tinjau ulang advisory dan kompatibilitas sebelum deploy publik.
+- Audit penuh pada tooling fase ini juga melaporkan tujuh temuan moderate dari `minimatch` (GHSA-g3hv-75wg-m249), dependency development melalui TypeScript ESLint. Tidak ada perbaikan non-breaking yang ditawarkan npm; `npm audit fix --dry-run` mengusulkan perubahan versi yang dianggap breaking. Tooling tersebut tidak dipakai saat runtime aplikasi. Tinjau ulang audit sebelum rilis dan evaluasi versi aman setelah ada jalur upgrade yang kompatibel.
 
 ## Struktur
 
@@ -173,8 +176,9 @@ docker-compose.yml
 - API: `POST /api/v1/auth/register`, `/login`, `/refresh`, `/logout`; `GET /api/v1/auth/me`.
 - Registrasi publik hanya dapat membuat role `STUDENT`; role diambil dari server, bukan dari input client.
 - Access JWT berlaku 15 menit. Refresh token acak disimpan sebagai SHA-256 hash dan diputar setiap refresh.
-- Refresh token hanya dikirim melalui cookie `HttpOnly`; browser menyimpan access token hanya di memori.
+- Refresh token hanya dikirim melalui cookie `HttpOnly`; browser menyimpan access token hanya di memori. Cookie production memakai `Secure` dan `SameSite=Lax`; konfigurasi ini mengasumsikan frontend mem-proxy `/api` sehingga browser mengakses satu origin.
 - Password di-hash dengan bcrypt (12 rounds); JWT secret wajib diisi melalui `.env`.
+- API gagal saat startup bila secret kosong/lemah (minimal 32 karakter dengan 12 karakter unik), secret access dan QR sama, atau `WEB_ORIGIN` bukan origin valid/HTTPS di production. CORS memakai allowlist origin, Helmet mengatur header keamanan, dan rate limit berlaku global serta lebih ketat untuk autentikasi. Di production, Express mempercayai satu reverse-proxy hop agar rate limit memakai alamat client yang diteruskan platform.
 - Auth endpoint dibatasi 20 request per 15 menit. CORS memakai `WEB_ORIGIN`, dan endpoint auth menolak `Origin` yang tidak cocok.
 - Respons error memakai `{ "error": { "code": "...", "message": "..." } }`.
 - UI: `/login`, `/register`, `/dashboard`, serta area role `/admin`, `/lecturer`, `/student`.

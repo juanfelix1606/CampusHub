@@ -11,6 +11,9 @@
     "dev": "npm run dev --workspace @campushub/api",
     "dev:web": "npm run dev --workspace @campushub/web",
     "build": "npm run build --workspace @campushub/api && npm run build --workspace @campushub/web",
+    "lint": "eslint apps/api/src apps/web/src playwright.config.ts eslint.config.mjs e2e",
+    "format:check": "prettier --check \"apps/**/*.{ts,tsx,json}\" \"e2e/**/*.ts\" \"*.{json,js,mjs,ts}\" \".github/workflows/*.yml\"",
+    "test:e2e": "playwright test",
     "test": "npm run test --workspace @campushub/api",
     "test:unit": "npm run test:unit --workspace @campushub/api",
     "test:integration": "npm run test:integration --workspace @campushub/api",
@@ -28,5 +31,15 @@
     "@prisma/engines@6.19.3": true,
     "esbuild@0.28.2": true,
     "esbuild@0.25.12": true
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.65.0",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "typescript-eslint": "^8.72.1"
   }
 }

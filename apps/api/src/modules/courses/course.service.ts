@@ -23,7 +23,8 @@ export class CourseService {
     try {
       return await this.repository.create(input);
     } catch (error) {
-      if (isUniqueConstraintError(error)) throw new ConflictError("A course with this code already exists.");
+      if (isUniqueConstraintError(error))
+        throw new ConflictError("A course with this code already exists.");
       throw error;
     }
   }
@@ -35,7 +36,8 @@ export class CourseService {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
         throw new NotFoundError("Course not found.");
       }
-      if (isUniqueConstraintError(error)) throw new ConflictError("A course with this code already exists.");
+      if (isUniqueConstraintError(error))
+        throw new ConflictError("A course with this code already exists.");
       throw error;
     }
   }

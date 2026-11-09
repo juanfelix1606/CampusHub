@@ -54,7 +54,9 @@ export class ClassService {
       return await this.repository.create(input);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new ConflictError("This course already has a section with that name in this semester.");
+        throw new ConflictError(
+          "This course already has a section with that name in this semester.",
+        );
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
         throw new NotFoundError("Course or semester not found.");
@@ -82,7 +84,9 @@ export class ClassService {
         throw new NotFoundError("Class section not found.");
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new ConflictError("This course already has a section with that name in this semester.");
+        throw new ConflictError(
+          "This course already has a section with that name in this semester.",
+        );
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
         throw new NotFoundError("Course or semester not found.");
@@ -120,10 +124,10 @@ export class ClassService {
   }
 
   async unenroll(sectionId: string, studentId: string) {
-    if (!(await this.repository.findById(sectionId))) throw new NotFoundError("Class section not found.");
+    if (!(await this.repository.findById(sectionId)))
+      throw new NotFoundError("Class section not found.");
     if (!(await this.repository.unenroll(sectionId, studentId))) {
       throw new NotFoundError("You are not enrolled in this class.");
     }
   }
-
 }

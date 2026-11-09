@@ -44,7 +44,8 @@ describe("auth API with PostgreSQL Prisma repository", () => {
       .send({ name: "Integration Student", email, password })
       .expect(201);
     const accessToken = registration.body.data.accessToken as string;
-    const rawRefreshToken = registration.headers["set-cookie"][0].match(/refreshToken=([^;]+)/)?.[1];
+    const rawRefreshToken =
+      registration.headers["set-cookie"][0].match(/refreshToken=([^;]+)/)?.[1];
     expect(rawRefreshToken).toBeTruthy();
 
     const stored = await prisma.refreshToken.findUniqueOrThrow({

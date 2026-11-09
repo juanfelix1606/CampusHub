@@ -6,9 +6,7 @@ export function attendanceStatusAt(
   checkedInAt: Date,
 ): AttendanceStatus {
   const lateBoundary = startedAt.getTime() + lateAfterMinutes * 60_000;
-  return checkedInAt.getTime() <= lateBoundary
-    ? AttendanceStatus.PRESENT
-    : AttendanceStatus.LATE;
+  return checkedInAt.getTime() <= lateBoundary ? AttendanceStatus.PRESENT : AttendanceStatus.LATE;
 }
 
 export { attendanceCsv, attendanceCsvCell } from "../../shared/csv";

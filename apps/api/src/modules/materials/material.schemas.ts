@@ -13,7 +13,10 @@ export const materialUpdateSchema = z
     description: z.string().trim().max(2000).optional().nullable(),
   })
   .strict()
-  .refine((value) => Object.keys(value).length > 0, "Provide at least one field or a replacement file.");
+  .refine(
+    (value) => Object.keys(value).length > 0,
+    "Provide at least one field or a replacement file.",
+  );
 
 export type MaterialFields = z.infer<typeof materialFieldsSchema>;
 export type MaterialUpdate = z.infer<typeof materialUpdateSchema>;

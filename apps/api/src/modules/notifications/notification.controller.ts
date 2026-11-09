@@ -12,7 +12,10 @@ export class NotificationController {
   };
 
   markRead = async (request: Request, response: Response): Promise<void> => {
-    await this.service.markRead(uuidSchema.parse(request.params.notificationId), request.authUser!.id);
+    await this.service.markRead(
+      uuidSchema.parse(request.params.notificationId),
+      request.authUser!.id,
+    );
     response.json({ data: { message: "Notification marked as read." } });
   };
 

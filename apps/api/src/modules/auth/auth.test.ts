@@ -126,6 +126,38 @@ describe("authentication API", () => {
       .expect(({ body }) => expect(body.data.user.email).toBe("student@example.test"));
   });
 
+  it("uses a secure, same-site refresh cookie when production security is enabled", async () => {
+    const productionApp = createApp({ ...config, cookieSecure: true }, repository);
+    const response = await request(productionApp).post("/api/v1/auth/register").send({
+      name: "Production Cookie Student",
+      email: "production-cookie@example.test",
+      password: "A-long-demo-password-123",
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.headers["set-cookie"][0]).toContain("HttpOnly");
+    expect(response.headers["set-cookie"][0]).toContain("Secure");
+    expect(response.headers["set-cookie"][0]).toContain("SameSite=Lax");
+    expect(response.headers["set-cookie"][0]).not.toContain("SameSite=None");
+    expect(productionApp.get("trust proxy")).toBe(1);
+  });
+
+  it("sets security headers and only grants CORS access to the configured web origin", async () => {
+    const allowed = await request(app)
+      .get("/api/v1/health")
+      .set("Origin", config.webOrigin)
+      .expect(200);
+    expect(allowed.headers["x-content-type-options"]).toBe("nosniff");
+    expect(allowed.headers["x-powered-by"]).toBeUndefined();
+    expect(allowed.headers["access-control-allow-origin"]).toBe(config.webOrigin);
+
+    const disallowed = await request(app)
+      .get("/api/v1/health")
+      .set("Origin", "https://untrusted.example")
+      .expect(200);
+    expect(disallowed.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+
   it("rejects duplicate registrations and invalid input", async () => {
     const payload = {
       name: "Test Student",
@@ -182,22 +214,32 @@ describe("authentication API", () => {
 
   it("denies a student on an admin-only route", async () => {
     const accessToken = (
-      await request(app)
-        .post("/api/v1/auth/register")
-        .send({
-          name: "Another Student",
-          email: "another@example.test",
-          password: "A-long-demo-password-123",
-        })
+      await request(app).post("/api/v1/auth/register").send({
+        name: "Another Student",
+        email: "another@example.test",
+        password: "A-long-demo-password-123",
+      })
     ).body.data.accessToken as string;
     const rbacApp = express();
-    rbacApp.get("/admin", authenticate(config.accessTokenSecret), authorize(UserRole.ADMIN), (_req, res) => {
-      res.sendStatus(204);
-    });
-    rbacApp.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      const status = (error as { statusCode?: number }).statusCode ?? 500;
-      res.status(status).json({ status });
-    });
+    rbacApp.get(
+      "/admin",
+      authenticate(config.accessTokenSecret),
+      authorize(UserRole.ADMIN),
+      (_req, res) => {
+        res.sendStatus(204);
+      },
+    );
+    rbacApp.use(
+      (
+        error: unknown,
+        _req: express.Request,
+        res: express.Response,
+        _next: express.NextFunction,
+      ) => {
+        const status = (error as { statusCode?: number }).statusCode ?? 500;
+        res.status(status).json({ status });
+      },
+    );
 
     await request(rbacApp).get("/admin").set("Authorization", `Bearer ${accessToken}`).expect(403);
   });

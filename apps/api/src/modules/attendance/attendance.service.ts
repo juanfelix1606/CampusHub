@@ -1,5 +1,4 @@
-import { randomUUID } from "node:crypto";
-import { AttendanceStatus, UserRole } from "@prisma/client";
+import { AttendanceStatus } from "@prisma/client";
 import { ConflictError, ForbiddenError, NotFoundError } from "../../shared/errors";
 import { paginated } from "../../shared/pagination";
 import type { DomainEventBus } from "../../shared/domain-events";
@@ -11,8 +10,6 @@ import type {
 } from "./attendance.schemas";
 import { attendanceCsv } from "../../shared/csv";
 import { hashSessionNonce, issueQrToken, verifyQrToken } from "./attendance-token";
-
-type AttendanceUser = { id: string; role: UserRole };
 
 export class AttendanceService {
   constructor(
@@ -72,11 +69,7 @@ export class AttendanceService {
     return { id: result.id, closedAt: result.closedAt };
   }
 
-  async listSessionAttendance(
-    sessionId: string,
-    lecturerId: string,
-    input: AttendanceListInput,
-  ) {
+  async listSessionAttendance(sessionId: string, lecturerId: string, input: AttendanceListInput) {
     const result = await this.repository.listSessionAttendance(sessionId, lecturerId, input);
     return {
       ...paginated(result.items, result.total, input.page, input.pageSize),
@@ -116,7 +109,7 @@ export class AttendanceService {
   }
 
   async exportSession(sessionId: string, lecturerId: string): Promise<string> {
-    const { session, enrollments } = await this.repository.exportSession(sessionId, lecturerId);
+    const { enrollments } = await this.repository.exportSession(sessionId, lecturerId);
     const rows = enrollments.map(({ student }) => ({
       studentId: student.id,
       studentName: student.name,
@@ -156,10 +149,7 @@ export class AttendanceService {
     ]);
   }
 
-  private assertSessionOpen(
-    session: { closedAt: Date | null; expiresAt: Date },
-    now: Date,
-  ): void {
+  private assertSessionOpen(session: { closedAt: Date | null; expiresAt: Date }, now: Date): void {
     if (session.closedAt || session.expiresAt <= now) {
       throw new ConflictError("Attendance session is closed or expired.");
     }

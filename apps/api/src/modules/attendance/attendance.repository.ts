@@ -49,12 +49,7 @@ export class PrismaAttendanceRepository {
     });
   }
 
-  async listClassSessions(
-    classId: string,
-    lecturerId: string,
-    page: number,
-    pageSize: number,
-  ) {
+  async listClassSessions(classId: string, lecturerId: string, page: number, pageSize: number) {
     await this.assertLecturerOwnsClass(classId, lecturerId);
     const where = { sectionId: classId };
     const [items, total] = await this.prisma.$transaction([
@@ -165,10 +160,7 @@ export class PrismaAttendanceRepository {
     });
   }
 
-  async listSessionsForStudent(
-    input: AttendanceListInput,
-    studentId: string,
-  ) {
+  async listSessionsForStudent(input: AttendanceListInput, studentId: string) {
     const where: Prisma.AttendanceSessionWhereInput = {
       ...(input.sessionId ? { id: input.sessionId } : {}),
       ...(input.classId ? { sectionId: input.classId } : {}),
@@ -224,7 +216,10 @@ export class PrismaAttendanceRepository {
     });
     if (!enrollment) throw new ForbiddenError("You must be enrolled in this class.");
     const sessions = await this.prisma.attendanceSession.findMany({
-      where: { sectionId: classId, OR: [{ closedAt: { not: null } }, { expiresAt: { lte: new Date() } }] },
+      where: {
+        sectionId: classId,
+        OR: [{ closedAt: { not: null } }, { expiresAt: { lte: new Date() } }],
+      },
       include: { attendances: { where: { studentId }, select: { status: true } } },
       orderBy: { createdAt: "desc" },
     });
@@ -241,16 +236,13 @@ export class PrismaAttendanceRepository {
       summary: {
         totalSessions: total,
         ...counts,
-        percentage: total === 0 ? 0 : Math.round(((counts.PRESENT + counts.LATE) / total) * 10_000) / 100,
+        percentage:
+          total === 0 ? 0 : Math.round(((counts.PRESENT + counts.LATE) / total) * 10_000) / 100,
       },
     };
   }
 
-  async listSessionAttendance(
-    sessionId: string,
-    lecturerId: string,
-    input: AttendanceListInput,
-  ) {
+  async listSessionAttendance(sessionId: string, lecturerId: string, input: AttendanceListInput) {
     const session = await this.sessionOwnedByLecturer(sessionId, lecturerId);
     const statusFilter = input.status;
     const where: Prisma.EnrollmentWhereInput = {
@@ -261,7 +253,11 @@ export class PrismaAttendanceRepository {
           ? {
               OR: [
                 { student: { attendances: { none: { sessionId } } } },
-                { student: { attendances: { some: { sessionId, status: AttendanceStatus.ABSENT } } } },
+                {
+                  student: {
+                    attendances: { some: { sessionId, status: AttendanceStatus.ABSENT } },
+                  },
+                },
               ],
             }
           : { student: { attendances: { some: { sessionId, status: statusFilter } } } }
@@ -299,9 +295,7 @@ export class PrismaAttendanceRepository {
         select: { status: true },
       }),
     ]);
-    const counts = countStatuses(
-      statusRows.map(({ status }) => status),
-    );
+    const counts = countStatuses(statusRows.map(({ status }) => status));
     counts.ABSENT += Math.max(0, rosterSize - statusRows.length);
     return {
       items: enrollments.map(({ student }) => ({
@@ -347,7 +341,8 @@ export class PrismaAttendanceRepository {
             where: { id: current.id },
             data: {
               status: input.status,
-              ...(input.status === AttendanceStatus.PRESENT || input.status === AttendanceStatus.LATE
+              ...(input.status === AttendanceStatus.PRESENT ||
+              input.status === AttendanceStatus.LATE
                 ? { checkedInAt: current.checkedInAt ?? now }
                 : {}),
             },
@@ -357,7 +352,10 @@ export class PrismaAttendanceRepository {
               sessionId,
               studentId,
               status: input.status,
-              checkedInAt: input.status === AttendanceStatus.PRESENT || input.status === AttendanceStatus.LATE ? now : null,
+              checkedInAt:
+                input.status === AttendanceStatus.PRESENT || input.status === AttendanceStatus.LATE
+                  ? now
+                  : null,
             },
           });
       await transaction.attendanceAudit.create({
@@ -375,7 +373,13 @@ export class PrismaAttendanceRepository {
   }
 
   async exportSession(sessionId: string, lecturerId: string) {
-    const result = await this.listSessionAttendance(sessionId, lecturerId, { page: 1, pageSize: 100, status: undefined, sessionId: undefined, studentId: undefined });
+    const result = await this.listSessionAttendance(sessionId, lecturerId, {
+      page: 1,
+      pageSize: 100,
+      status: undefined,
+      sessionId: undefined,
+      studentId: undefined,
+    });
     const enrollments = await this.prisma.enrollment.findMany({
       where: { sectionId: result.session.sectionId },
       include: {
@@ -401,7 +405,9 @@ export class PrismaAttendanceRepository {
         attendances: {
           include: { student: { select: { id: true, name: true, email: true } } },
         },
-        section: { include: { course: true, semester: true, enrollments: { include: { student: true } } } },
+        section: {
+          include: { course: true, semester: true, enrollments: { include: { student: true } } },
+        },
       },
       orderBy: { createdAt: "asc" },
     });

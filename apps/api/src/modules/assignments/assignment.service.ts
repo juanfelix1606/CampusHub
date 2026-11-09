@@ -1,20 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { basename } from "node:path";
 import type { UserRole } from "@prisma/client";
-import {
-  BadRequestError,
-  ConflictError,
-  ForbiddenError,
-  NotFoundError,
-} from "../../shared/errors";
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../../shared/errors";
 import { paginated } from "../../shared/pagination";
 import type { DomainEventBus } from "../../shared/domain-events";
 import { attendanceCsv } from "../../shared/csv";
 import type { FileStorage } from "../materials/file-storage";
-import {
-  validateMaterialFile,
-  type UploadedMaterialFile,
-} from "../materials/material-upload";
+import { validateMaterialFile, type UploadedMaterialFile } from "../materials/material-upload";
 import { PrismaAssignmentRepository } from "./assignment.repository";
 import type {
   AssignmentInput,
@@ -126,18 +118,13 @@ export class AssignmentService {
       }
     }
     const storedFile = file ? await this.storeFile(file) : undefined;
-    const result = await this.repository.update(
-      id,
-      lecturerId,
-      input,
-      storedFile,
-      input.removeAttachment === true,
-    ).catch(async (error: unknown) => {
-      if (storedFile) await this.storage.delete(storedFile.key);
-      throw error;
-    });
-    const oldAttachmentKey =
-      storedFile || input.removeAttachment ? assignment.attachmentKey : null;
+    const result = await this.repository
+      .update(id, lecturerId, input, storedFile, input.removeAttachment === true)
+      .catch(async (error: unknown) => {
+        if (storedFile) await this.storage.delete(storedFile.key);
+        throw error;
+      });
+    const oldAttachmentKey = storedFile || input.removeAttachment ? assignment.attachmentKey : null;
     if (oldAttachmentKey) await this.storage.delete(oldAttachmentKey);
     return this.publicAssignment(result);
   }
@@ -188,11 +175,7 @@ export class AssignmentService {
     };
   }
 
-  async listSubmissions(
-    assignmentId: string,
-    lecturerId: string,
-    query: SubmissionListQuery,
-  ) {
+  async listSubmissions(assignmentId: string, lecturerId: string, query: SubmissionListQuery) {
     await this.requireLecturerAssignment(assignmentId, lecturerId);
     const result = await this.repository.listSubmissions(assignmentId, query);
     return paginated(
@@ -207,12 +190,7 @@ export class AssignmentService {
     );
   }
 
-  async grade(
-    assignmentId: string,
-    submissionId: string,
-    lecturerId: string,
-    input: GradeInput,
-  ) {
+  async grade(assignmentId: string, submissionId: string, lecturerId: string, input: GradeInput) {
     const assignment = await this.requireLecturerAssignment(assignmentId, lecturerId);
     assertGradeWithinMaximum(input.score, assignment.maxScore);
     const submission = await this.repository.grade(assignmentId, submissionId, lecturerId, input);
@@ -246,9 +224,10 @@ export class AssignmentService {
           email: student.email,
           assignment: assignment.title,
           deadline: assignment.deadline,
-          score: submission?.score === null || submission?.score === undefined
-            ? null
-            : Number(submission.score),
+          score:
+            submission?.score === null || submission?.score === undefined
+              ? null
+              : Number(submission.score),
           maxScore: assignment.maxScore,
           feedback: submission?.feedback ?? null,
           gradedAt: submission?.gradedAt ?? null,
@@ -285,7 +264,11 @@ export class AssignmentService {
 
   async downloadAttachment(assignmentId: string, user: AssignmentUser) {
     const assignment = await this.requireAssignmentAccess(assignmentId, user);
-    if (!assignment.attachmentKey || !assignment.attachmentFileName || !assignment.attachmentContentType) {
+    if (
+      !assignment.attachmentKey ||
+      !assignment.attachmentFileName ||
+      !assignment.attachmentContentType
+    ) {
       throw new NotFoundError("Assignment attachment not found.");
     }
     return {
@@ -295,14 +278,14 @@ export class AssignmentService {
     };
   }
 
-  async downloadSubmissionFile(
-    assignmentId: string,
-    submissionId: string,
-    user: AssignmentUser,
-  ) {
+  async downloadSubmissionFile(assignmentId: string, submissionId: string, user: AssignmentUser) {
     const submission = await this.repository.findSubmission(assignmentId, submissionId);
     if (!submission) throw new NotFoundError("Submission not found.");
-    this.assertSubmissionAccess(submission.studentId, submission.assignment.section.lecturerId, user);
+    this.assertSubmissionAccess(
+      submission.studentId,
+      submission.assignment.section.lecturerId,
+      user,
+    );
     if (!submission.fileKey || !submission.fileName || !submission.contentType) {
       throw new NotFoundError("Submission file not found.");
     }
@@ -325,7 +308,11 @@ export class AssignmentService {
       versionId,
     );
     if (!version) throw new NotFoundError("Submission version not found.");
-    this.assertSubmissionAccess(version.submission.studentId, version.submission.assignment.section.lecturerId, user);
+    this.assertSubmissionAccess(
+      version.submission.studentId,
+      version.submission.assignment.section.lecturerId,
+      user,
+    );
     if (!version.fileKey || !version.fileName || !version.contentType) {
       throw new NotFoundError("Submission version file not found.");
     }
@@ -382,7 +369,8 @@ export class AssignmentService {
   }
 
   private assertLecturerOwnsResource(ownerId: string, lecturerId: string): void {
-    if (ownerId !== lecturerId) throw new ForbiddenError("Only the assigned lecturer can manage this class.");
+    if (ownerId !== lecturerId)
+      throw new ForbiddenError("Only the assigned lecturer can manage this class.");
   }
 
   private async assertStudentEnrolled(classId: string, studentId: string): Promise<void> {
@@ -397,7 +385,9 @@ export class AssignmentService {
     await this.storage.save(key, file.buffer);
     return {
       key,
-      name: basename(file.originalname).replace(/[^\w.-]/g, "_").slice(0, 180),
+      name: basename(file.originalname)
+        .replace(/[^\w.-]/g, "_")
+        .slice(0, 180),
       contentType: mimeType,
     };
   }

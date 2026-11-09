@@ -107,7 +107,10 @@ export class AttendanceController {
     );
     response
       .setHeader("Content-Type", "text/csv; charset=utf-8")
-      .setHeader("Content-Disposition", `attachment; filename="attendance-session-${request.params.sessionId}.csv"`)
+      .setHeader(
+        "Content-Disposition",
+        `attachment; filename="attendance-session-${request.params.sessionId}.csv"`,
+      )
       .setHeader("X-Content-Type-Options", "nosniff")
       .send(csv);
   };
@@ -119,7 +122,10 @@ export class AttendanceController {
     );
     response
       .setHeader("Content-Type", "text/csv; charset=utf-8")
-      .setHeader("Content-Disposition", `attachment; filename="attendance-class-${request.params.classId}.csv"`)
+      .setHeader(
+        "Content-Disposition",
+        `attachment; filename="attendance-class-${request.params.classId}.csv"`,
+      )
       .setHeader("X-Content-Type-Options", "nosniff")
       .send(csv);
   };

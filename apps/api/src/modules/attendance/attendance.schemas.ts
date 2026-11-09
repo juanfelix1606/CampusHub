@@ -8,15 +8,17 @@ export const openSessionSchema = z.object({
   lateAfterMinutes: z.coerce.number().int().min(0).max(240).default(10),
 });
 
-export const attendanceListSchema = paginationSchema.pick({
-  page: true,
-  pageSize: true,
-}).extend({
-  status: z.nativeEnum(AttendanceStatus).optional(),
-  sessionId: z.string().uuid().optional(),
-  studentId: z.string().uuid().optional(),
-  classId: z.string().uuid().optional(),
-});
+export const attendanceListSchema = paginationSchema
+  .pick({
+    page: true,
+    pageSize: true,
+  })
+  .extend({
+    status: z.nativeEnum(AttendanceStatus).optional(),
+    sessionId: z.string().uuid().optional(),
+    studentId: z.string().uuid().optional(),
+    classId: z.string().uuid().optional(),
+  });
 
 export const checkInSchema = z.object({
   sessionId: z.string().uuid(),

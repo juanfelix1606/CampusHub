@@ -9,7 +9,12 @@ export class MaterialController {
   list = async (request: Request, response: Response): Promise<void> => {
     const { page, pageSize } = paginationSchema.parse(request.query);
     response.json({
-      data: await this.service.list(uuidSchema.parse(request.params.classId), request.authUser!, page, pageSize),
+      data: await this.service.list(
+        uuidSchema.parse(request.params.classId),
+        request.authUser!,
+        page,
+        pageSize,
+      ),
     });
   };
 

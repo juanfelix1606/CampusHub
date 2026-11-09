@@ -5,14 +5,44 @@ import { AuthProvider, useAuth } from "./features/auth/AuthContext";
 import { ProtectedRoute } from "./features/auth/ProtectedRoute";
 import type { UserRole } from "./features/auth/auth.types";
 
-const AnalyticsPage = lazy(() => import("./features/analytics/AnalyticsPage").then((module) => ({ default: module.AnalyticsPage })));
-const AdminCoursesPage = lazy(() => import("./features/courses/CampusPages").then((module) => ({ default: module.AdminCoursesPage })));
-const LecturerClassesPage = lazy(() => import("./features/courses/CampusPages").then((module) => ({ default: module.LecturerClassesPage })));
-const StudentClassesPage = lazy(() => import("./features/courses/CampusPages").then((module) => ({ default: module.StudentClassesPage })));
-const LecturerAssignmentsPage = lazy(() => import("./features/assignments/AssignmentPages").then((module) => ({ default: module.LecturerAssignmentsPage })));
-const StudentAssignmentsPage = lazy(() => import("./features/assignments/AssignmentPages").then((module) => ({ default: module.StudentAssignmentsPage })));
-const LecturerAttendancePage = lazy(() => import("./features/attendance/AttendancePages").then((module) => ({ default: module.LecturerAttendancePage })));
-const StudentAttendancePage = lazy(() => import("./features/attendance/AttendancePages").then((module) => ({ default: module.StudentAttendancePage })));
+const AnalyticsPage = lazy(() =>
+  import("./features/analytics/AnalyticsPage").then((module) => ({
+    default: module.AnalyticsPage,
+  })),
+);
+const AdminCoursesPage = lazy(() =>
+  import("./features/courses/CampusPages").then((module) => ({ default: module.AdminCoursesPage })),
+);
+const LecturerClassesPage = lazy(() =>
+  import("./features/courses/CampusPages").then((module) => ({
+    default: module.LecturerClassesPage,
+  })),
+);
+const StudentClassesPage = lazy(() =>
+  import("./features/courses/CampusPages").then((module) => ({
+    default: module.StudentClassesPage,
+  })),
+);
+const LecturerAssignmentsPage = lazy(() =>
+  import("./features/assignments/AssignmentPages").then((module) => ({
+    default: module.LecturerAssignmentsPage,
+  })),
+);
+const StudentAssignmentsPage = lazy(() =>
+  import("./features/assignments/AssignmentPages").then((module) => ({
+    default: module.StudentAssignmentsPage,
+  })),
+);
+const LecturerAttendancePage = lazy(() =>
+  import("./features/attendance/AttendancePages").then((module) => ({
+    default: module.LecturerAttendancePage,
+  })),
+);
+const StudentAttendancePage = lazy(() =>
+  import("./features/attendance/AttendancePages").then((module) => ({
+    default: module.StudentAttendancePage,
+  })),
+);
 
 export default function App() {
   return (
@@ -67,11 +97,17 @@ function HomePage() {
       </div>
       <div className="mt-10 flex gap-3">
         {user ? (
-          <Link className={primaryLinkClass} to="/dashboard">Buka dashboard</Link>
+          <Link className={primaryLinkClass} to="/dashboard">
+            Buka dashboard
+          </Link>
         ) : (
           <>
-            <Link className={primaryLinkClass} to="/login">Masuk</Link>
-            <Link className={secondaryLinkClass} to="/register">Daftar mahasiswa</Link>
+            <Link className={primaryLinkClass} to="/login">
+              Masuk
+            </Link>
+            <Link className={secondaryLinkClass} to="/register">
+              Daftar mahasiswa
+            </Link>
           </>
         )}
       </div>
@@ -87,7 +123,9 @@ function RolePage({ role }: { role: UserRole }) {
 }
 
 function LoadingPage() {
-  return <main className="grid min-h-screen place-items-center text-slate-600">Memuat sesi...</main>;
+  return (
+    <main className="grid min-h-screen place-items-center text-slate-600">Memuat sesi...</main>
+  );
 }
 
 const primaryLinkClass =

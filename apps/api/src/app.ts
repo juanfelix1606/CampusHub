@@ -20,7 +20,10 @@ import { CourseController } from "./modules/courses/course.controller";
 import { PrismaClassRepository } from "./modules/classes/class.repository";
 import { ClassService } from "./modules/classes/class.service";
 import { ClassController } from "./modules/classes/class.controller";
-import { createClassMaterialsRouter, createMaterialRouter } from "./modules/materials/material.routes";
+import {
+  createClassMaterialsRouter,
+  createMaterialRouter,
+} from "./modules/materials/material.routes";
 import { PrismaMaterialRepository } from "./modules/materials/material.repository";
 import { MaterialService } from "./modules/materials/material.service";
 import { MaterialController } from "./modules/materials/material.controller";
@@ -84,6 +87,7 @@ export function createApp(
     }),
   );
 
+  app.set("trust proxy", config.cookieSecure ? 1 : false);
   app.disable("x-powered-by");
   app.use(helmet());
   app.use(
@@ -111,7 +115,10 @@ export function createApp(
   app.use("/api/v1/auth", createAuthRouter(authController, config));
   app.use("/api/v1/courses", createCourseRouter(courseController, config.accessTokenSecret));
   app.use("/api/v1/classes", createClassRouter(classController, config.accessTokenSecret));
-  app.use("/api/v1/classes/:classId/materials", createClassMaterialsRouter(materialController, config.accessTokenSecret));
+  app.use(
+    "/api/v1/classes/:classId/materials",
+    createClassMaterialsRouter(materialController, config.accessTokenSecret),
+  );
   app.use("/api/v1/materials", createMaterialRouter(materialController, config.accessTokenSecret));
   app.use("/api/v1", createAssignmentRouter(assignmentController, config.accessTokenSecret));
   app.use("/api/v1", createAttendanceRouter(attendanceController, config.accessTokenSecret));

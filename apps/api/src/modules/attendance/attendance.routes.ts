@@ -19,15 +19,13 @@ export function createAttendanceRouter(
       limit: 60,
       standardHeaders: "draft-8",
       legacyHeaders: false,
-      message: { error: { code: "RATE_LIMITED", message: "Too many check-in attempts. Try again shortly." } },
+      message: {
+        error: { code: "RATE_LIMITED", message: "Too many check-in attempts. Try again shortly." },
+      },
     }),
     controller.checkIn,
   );
-  router.get(
-    "/classes/:classId/attendance/me",
-    authorize("STUDENT"),
-    controller.classSummary,
-  );
+  router.get("/classes/:classId/attendance/me", authorize("STUDENT"), controller.classSummary);
   router.get(
     "/classes/:classId/attendance/export.csv",
     authorize("LECTURER"),
@@ -43,11 +41,7 @@ export function createAttendanceRouter(
     authorize("LECTURER"),
     controller.openSession,
   );
-  router.get(
-    "/attendance/sessions/:sessionId/qr",
-    authorize("LECTURER"),
-    controller.qrToken,
-  );
+  router.get("/attendance/sessions/:sessionId/qr", authorize("LECTURER"), controller.qrToken);
   router.post(
     "/attendance/sessions/:sessionId/close",
     authorize("LECTURER"),

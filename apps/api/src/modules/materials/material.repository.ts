@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import type { MaterialFields, MaterialUpdate } from "./material.schemas";
 
 export class PrismaMaterialRepository {
@@ -12,9 +12,7 @@ export class PrismaMaterialRepository {
   }
 
   async canAccessClass(classId: string, studentId: string): Promise<boolean> {
-    return (
-      (await this.prisma.enrollment.count({ where: { sectionId: classId, studentId } })) > 0
-    );
+    return (await this.prisma.enrollment.count({ where: { sectionId: classId, studentId } })) > 0;
   }
 
   async list(classId: string, page: number, pageSize: number) {
@@ -35,21 +33,27 @@ export class PrismaMaterialRepository {
     return this.prisma.material.findUnique({ where: { id } });
   }
 
-  create(input: MaterialFields & {
-    sectionId: string;
-    lecturerId: string;
-    fileKey: string;
-    fileName: string;
-    contentType: string;
-  }) {
+  create(
+    input: MaterialFields & {
+      sectionId: string;
+      lecturerId: string;
+      fileKey: string;
+      fileName: string;
+      contentType: string;
+    },
+  ) {
     return this.prisma.material.create({ data: input });
   }
 
-  update(id: string, input: MaterialUpdate & Partial<{
-    fileKey: string;
-    fileName: string;
-    contentType: string;
-  }>) {
+  update(
+    id: string,
+    input: MaterialUpdate &
+      Partial<{
+        fileKey: string;
+        fileName: string;
+        contentType: string;
+      }>,
+  ) {
     return this.prisma.material.update({ where: { id }, data: input });
   }
 

@@ -32,12 +32,14 @@ export const gradeInputSchema = z.object({
   feedback: z.string().trim().max(5000).optional(),
 });
 
-export const submissionListQuerySchema = paginationSchema.pick({
-  page: true,
-  pageSize: true,
-}).extend({
-  status: z.enum(["SUBMITTED", "LATE", "GRADED"]).optional(),
-});
+export const submissionListQuerySchema = paginationSchema
+  .pick({
+    page: true,
+    pageSize: true,
+  })
+  .extend({
+    status: z.enum(["SUBMITTED", "LATE", "GRADED"]).optional(),
+  });
 
 export type AssignmentInput = z.infer<typeof assignmentInputSchema>;
 export type AssignmentUpdate = z.infer<typeof assignmentUpdateSchema>;

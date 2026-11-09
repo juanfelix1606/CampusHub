@@ -32,12 +32,12 @@ describe("rotating attendance QR tokens", () => {
 describe("attendance status and CSV export rules", () => {
   it("uses the server check-in time and late threshold boundary", () => {
     const startedAt = new Date("2026-11-09T10:00:00.000Z");
-    expect(
-      attendanceStatusAt(startedAt, 10, new Date("2026-11-09T10:10:00.000Z")),
-    ).toBe(AttendanceStatus.PRESENT);
-    expect(
-      attendanceStatusAt(startedAt, 10, new Date("2026-11-09T10:10:00.001Z")),
-    ).toBe(AttendanceStatus.LATE);
+    expect(attendanceStatusAt(startedAt, 10, new Date("2026-11-09T10:10:00.000Z"))).toBe(
+      AttendanceStatus.PRESENT,
+    );
+    expect(attendanceStatusAt(startedAt, 10, new Date("2026-11-09T10:10:00.001Z"))).toBe(
+      AttendanceStatus.LATE,
+    );
   });
 
   it.each(["=1+1", "+SUM(A1:A2)", "-1+2", "@SUM(A1)", "\t=1+1"])(
@@ -48,10 +48,10 @@ describe("attendance status and CSV export rules", () => {
   );
 
   it("quotes CSV fields, escapes quotes, includes a UTF-8 BOM, and keeps CRLF rows", () => {
-    const csv = attendanceCsv([{ studentName: 'Ada "A"', status: "PRESENT" }], [
-      "studentName",
-      "status",
-    ]);
+    const csv = attendanceCsv(
+      [{ studentName: 'Ada "A"', status: "PRESENT" }],
+      ["studentName", "status"],
+    );
     expect(csv).toBe('\uFEFF"studentName","status"\r\n"Ada ""A""","PRESENT"\r\n');
   });
 });

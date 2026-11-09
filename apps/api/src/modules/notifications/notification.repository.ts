@@ -66,11 +66,7 @@ export class PrismaNotificationRepository {
     });
   }
 
-  async announcements(
-    user: { id: string; role: UserRole },
-    page: number,
-    pageSize: number,
-  ) {
+  async announcements(user: { id: string; role: UserRole }, page: number, pageSize: number) {
     const where: Prisma.AnnouncementWhereInput =
       user.role === UserRole.ADMIN
         ? {}
@@ -87,7 +83,9 @@ export class PrismaNotificationRepository {
         where,
         include: {
           author: { select: { id: true, name: true, role: true } },
-          section: { select: { id: true, name: true, course: { select: { code: true, name: true } } } },
+          section: {
+            select: { id: true, name: true, course: { select: { code: true, name: true } } },
+          },
         },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         skip: (page - 1) * pageSize,
@@ -106,9 +104,11 @@ export class PrismaNotificationRepository {
       return (await this.prisma.classSection.count({ where: { id: sectionId } })) > 0;
     }
     if (user.role !== UserRole.LECTURER) return false;
-    return (await this.prisma.classSection.count({
-      where: { id: sectionId, lecturerId: user.id },
-    })) > 0;
+    return (
+      (await this.prisma.classSection.count({
+        where: { id: sectionId, lecturerId: user.id },
+      })) > 0
+    );
   }
 
   createAnnouncement(input: {
@@ -121,7 +121,9 @@ export class PrismaNotificationRepository {
       data: input,
       include: {
         author: { select: { id: true, name: true, role: true } },
-        section: { select: { id: true, name: true, course: { select: { code: true, name: true } } } },
+        section: {
+          select: { id: true, name: true, course: { select: { code: true, name: true } } },
+        },
       },
     });
   }

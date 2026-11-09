@@ -1,0 +1,6 @@
+package-lock.json
+apps/api/src/generated/
+node_modules/
+dist/
+coverage/
+docs/screenshots/

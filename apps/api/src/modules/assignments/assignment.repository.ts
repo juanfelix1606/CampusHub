@@ -6,11 +6,7 @@ import type {
   SubmissionListQuery,
 } from "./assignment.schemas";
 import { assertGradeWithinMaximum, getSubmissionLateStatus } from "./assignment.rules";
-import {
-  ConflictError,
-  ForbiddenError,
-  NotFoundError,
-} from "../../shared/errors";
+import { ConflictError, ForbiddenError, NotFoundError } from "../../shared/errors";
 
 export class PrismaAssignmentRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -314,12 +310,7 @@ export class PrismaAssignmentRepository {
     return { items, total };
   }
 
-  async grade(
-    assignmentId: string,
-    submissionId: string,
-    graderId: string,
-    input: GradeInput,
-  ) {
+  async grade(assignmentId: string, submissionId: string, graderId: string, input: GradeInput) {
     return this.prisma.$transaction(async (transaction) => {
       const locked = await transaction.$queryRaw<Array<{ id: string }>>`
         SELECT "id" FROM "Assignment" WHERE "id" = ${assignmentId}::uuid FOR UPDATE
@@ -414,7 +405,9 @@ export class PrismaAssignmentRepository {
     );
     const earned = graded.reduce((total, submission) => total + Number(submission.score), 0);
     const possible = assignments
-      .filter((assignment) => assignment.submissions.some((submission) => submission.score !== null))
+      .filter((assignment) =>
+        assignment.submissions.some((submission) => submission.score !== null),
+      )
       .reduce((total, assignment) => total + assignment.maxScore, 0);
     return {
       assignments,

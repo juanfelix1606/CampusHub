@@ -22,7 +22,10 @@ export function assertGradeWithinMaximum(score: number, maxScore: number): void 
   }
 }
 
-export function assertSubmissionHasContent(textContent: string | undefined, hasFile: boolean): void {
+export function assertSubmissionHasContent(
+  textContent: string | undefined,
+  hasFile: boolean,
+): void {
   if (!textContent?.trim() && !hasFile) {
     throw new BadRequestError("Provide submission text or a file.");
   }
