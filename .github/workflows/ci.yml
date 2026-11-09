@@ -44,6 +44,9 @@ jobs:
       - name: Lint (when configured)
         run: npm run lint --if-present
 
+      - name: Generate Prisma Client
+        run: npm run db:generate
+
       - name: Build
         run: npm run build
 
