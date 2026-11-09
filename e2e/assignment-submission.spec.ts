@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test("lecturer creates an assignment and a student submits it", async ({ browser, baseURL }) => {
+test("lecturer creates and grades an assignment submitted by a student", async ({
+  browser,
+  baseURL,
+}) => {
   const password = process.env.DEMO_PASSWORD;
   if (!password) throw new Error("DEMO_PASSWORD must match the seeded E2E accounts.");
   const appUrl = baseURL ?? "http://127.0.0.1:5173";
@@ -47,6 +50,25 @@ test("lecturer creates an assignment and a student submits it", async ({ browser
         .fill("Hasil pengujian alur pengumpulan tugas.");
       await assignmentCard.getByRole("button", { name: "Kirim tugas" }).click();
       await expect(assignmentCard.getByText("Status: Sudah dikumpulkan")).toBeVisible();
+
+      const assignmentRow = lecturerPage.locator("li").filter({ hasText: title });
+      await assignmentRow.getByRole("button", { name: "Lihat & nilai" }).click();
+      const submission = lecturerPage
+        .locator("article")
+        .filter({ hasText: "mahasiswa1@campushub.local" });
+      await submission.getByLabel("Nilai / 100").fill("84");
+      await submission.getByLabel("Feedback").fill("Pekerjaan sudah baik.");
+      await submission.getByRole("button", { name: "Beri nilai" }).click();
+      await expect(submission.getByRole("button", { name: "Ubah nilai" })).toBeVisible();
+      await expect(submission.getByLabel("Nilai / 100")).toHaveValue("84");
+
+      await studentPage.reload();
+      await expect(assignmentCard.getByText("Nilai 84/100")).toBeVisible();
+      await expect(assignmentCard.getByText("Feedback: Pekerjaan sudah baik.")).toBeVisible();
+      await studentPage.goto(`${appUrl}/dashboard`);
+      await expect(
+        studentPage.getByRole("link", { name: `Nilai tersedia: ${title}` }),
+      ).toBeVisible();
     } finally {
       await studentContext.close();
     }

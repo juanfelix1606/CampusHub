@@ -1,6 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
+import dotenv from "dotenv";
+import { resolve } from "node:path";
 
-const databaseUrl = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
+dotenv.config({ path: resolve(__dirname, ".env") });
+const databaseUrl = process.env.TEST_DATABASE_URL;
 if (!databaseUrl) {
   throw new Error("TEST_DATABASE_URL is required for end-to-end tests.");
 }
@@ -33,14 +36,14 @@ export default defineConfig({
     {
       command: "npm run dev --workspace @campushub/api",
       url: "http://127.0.0.1:3000/api/v1/health",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 120_000,
       env: apiEnvironment,
     },
     {
       command: "npm run dev --workspace @campushub/web -- --host 127.0.0.1",
       url: "http://127.0.0.1:5173",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 120_000,
     },
   ],
