@@ -6,7 +6,7 @@ CampusHub adalah proyek portofolio sistem informasi kampus yang menggabungkan LM
 
 ## Status
 
-Fase 1-5: fondasi monorepo, autentikasi/RBAC, pengelolaan kelas, enrollment dan materi, tugas, submission berversi, penilaian, serta absensi QR dinamis.
+Fase 1-6: fondasi monorepo, autentikasi/RBAC, pengelolaan kelas, enrollment dan materi, tugas, submission berversi, penilaian, absensi QR dinamis, dashboard analitik, pengumuman, notifikasi, dan ekspor CSV.
 
 ## Tech stack
 
@@ -131,6 +131,26 @@ sequenceDiagram
 | `GET` | `/api/v1/classes/:classId/attendance/export.csv` | Dosen pengampu |
 
 `ATTENDANCE_QR_SECRET` adalah secret terpisah dari access-token secret dan wajib tersedia pada API. Endpoint check-in dibatasi 60 request per menit per alamat IP. Scan kamera nyata perlu diverifikasi di perangkat melalui HTTPS/localhost; unit dan integration test memverifikasi token, otorisasi, konkurensi, expiry, audit, serta CSV.
+
+## Dashboard, pengumuman, notifikasi, dan ekspor (Fase 6)
+
+- Dashboard `/dashboard` menyajikan data sesuai role. Endpoint `GET /api/v1/dashboard` menghitung metrik di API: mahasiswa mendapat rekap kehadiran/tugas/nilai, dosen mendapat kehadiran per sesi, distribusi nilai, rasio pengumpulan dan mahasiswa berisiko, sedangkan admin mendapat jumlah pengguna per role, kelas aktif dan aktivitas terbaru.
+- Query analitik memakai include bertingkat yang dibatasi pada enrollment/kelas dosen, bukan query per baris (N+1). Ringkasan jumlah pengguna admin dihitung dengan satu query agregasi SQL; indeks relasi/urutan notifikasi dan jadwal tugas mendukung filter utama. Dashboard dosen dapat mengatur ambang risiko dengan `DASHBOARD_RISK_ATTENDANCE_PERCENT` (default 75) dan `DASHBOARD_RISK_MISSED_ASSIGNMENTS` (default 2).
+- Admin dan dosen pengampu dapat menerbitkan pengumuman. Mahasiswa hanya melihat pengumuman global dan kelas yang diikutinya; pengumuman kelas hanya mengirim notifikasi ke enrollment kelas tersebut.
+- Notifikasi dibuat dari event domain terpisah untuk tugas baru, nilai baru, sesi absensi dibuka, dan pengumuman. Daftar milik pengguna mendukung pagination, count belum dibaca, tandai dibaca, dan polling UI berkala.
+- Dosen pengampu dan admin dapat mengekspor rekap nilai kelas; hasil ekspor memakai helper CSV bersama dengan absensi untuk mengutip sel dan menetralkan formula spreadsheet.
+- Halaman menggunakan `React.lazy`/`Suspense` agar bundle layar dan library QR/chart dipisah. UI menyediakan loading, empty, dan error state; halaman analitik juga menampilkan grafik Recharts.
+- Seed membuat pengumuman global/kelas dan notifikasi contoh untuk kedua akun mahasiswa. Bukti smoke test browser tersimpan di `docs/screenshots/`: dashboard tiap role, daftar notifikasi, dan sesi absensi QR.
+
+| Method | Path | Akses |
+|---|---|---|
+| `GET` | `/api/v1/dashboard` | Pengguna terautentikasi; data disesuaikan role |
+| `GET` | `/api/v1/announcements` | Pengguna terautentikasi; audiens dibatasi backend |
+| `POST` | `/api/v1/announcements` | Admin (global/kelas), dosen pengampu (kelas sendiri) |
+| `GET` | `/api/v1/notifications` | Pemilik notifikasi; paginasi dan unread count |
+| `PATCH` | `/api/v1/notifications/:notificationId/read` | Pemilik notifikasi |
+| `POST` | `/api/v1/notifications/read-all` | Pengguna saat ini |
+| `GET` | `/api/v1/classes/:classId/grades/export.csv` | Admin atau dosen pengampu |
 
 ## Known issues
 

@@ -1,38 +1,47 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 import { AuthPage } from "./features/auth/AuthPage";
 import { AuthProvider, useAuth } from "./features/auth/AuthContext";
 import { ProtectedRoute } from "./features/auth/ProtectedRoute";
 import type { UserRole } from "./features/auth/auth.types";
-import { AdminCoursesPage, LecturerClassesPage, StudentClassesPage } from "./features/courses/CampusPages";
-import { LecturerAssignmentsPage, StudentAssignmentsPage } from "./features/assignments/AssignmentPages";
-import { LecturerAttendancePage, StudentAttendancePage } from "./features/attendance/AttendancePages";
+
+const AnalyticsPage = lazy(() => import("./features/analytics/AnalyticsPage").then((module) => ({ default: module.AnalyticsPage })));
+const AdminCoursesPage = lazy(() => import("./features/courses/CampusPages").then((module) => ({ default: module.AdminCoursesPage })));
+const LecturerClassesPage = lazy(() => import("./features/courses/CampusPages").then((module) => ({ default: module.LecturerClassesPage })));
+const StudentClassesPage = lazy(() => import("./features/courses/CampusPages").then((module) => ({ default: module.StudentClassesPage })));
+const LecturerAssignmentsPage = lazy(() => import("./features/assignments/AssignmentPages").then((module) => ({ default: module.LecturerAssignmentsPage })));
+const StudentAssignmentsPage = lazy(() => import("./features/assignments/AssignmentPages").then((module) => ({ default: module.StudentAssignmentsPage })));
+const LecturerAttendancePage = lazy(() => import("./features/attendance/AttendancePages").then((module) => ({ default: module.LecturerAttendancePage })));
+const StudentAttendancePage = lazy(() => import("./features/attendance/AttendancePages").then((module) => ({ default: module.StudentAttendancePage })));
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<AuthPage mode="login" />} />
-          <Route path="/register" element={<AuthPage mode="register" />} />
-          <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-          </Route>
-          <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
-            <Route path="/admin" element={<RolePage role="ADMIN" />} />
-          </Route>
-          <Route element={<ProtectedRoute roles={["LECTURER"]} />}>
-            <Route path="/lecturer" element={<RolePage role="LECTURER" />} />
-            <Route path="/lecturer/assignments" element={<LecturerAssignmentsPage />} />
-            <Route path="/lecturer/attendance" element={<LecturerAttendancePage />} />
-          </Route>
-          <Route element={<ProtectedRoute roles={["STUDENT"]} />}>
-            <Route path="/student" element={<RolePage role="STUDENT" />} />
-            <Route path="/student/assignments" element={<StudentAssignmentsPage />} />
-            <Route path="/student/attendance" element={<StudentAttendancePage />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense fallback={<LoadingPage />}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<AuthPage mode="login" />} />
+            <Route path="/register" element={<AuthPage mode="register" />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<AnalyticsPage />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
+              <Route path="/admin" element={<RolePage role="ADMIN" />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={["LECTURER"]} />}>
+              <Route path="/lecturer" element={<RolePage role="LECTURER" />} />
+              <Route path="/lecturer/assignments" element={<LecturerAssignmentsPage />} />
+              <Route path="/lecturer/attendance" element={<LecturerAttendancePage />} />
+            </Route>
+            <Route element={<ProtectedRoute roles={["STUDENT"]} />}>
+              <Route path="/student" element={<RolePage role="STUDENT" />} />
+              <Route path="/student/assignments" element={<StudentAssignmentsPage />} />
+              <Route path="/student/attendance" element={<StudentAttendancePage />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </AuthProvider>
     </BrowserRouter>
   );
@@ -70,60 +79,6 @@ function HomePage() {
   );
 }
 
-function DashboardPage() {
-  const { user, logout } = useAuth();
-  if (!user) return <LoadingPage />;
-  const rolePath: Record<UserRole, string> = {
-    ADMIN: "/admin",
-    LECTURER: "/lecturer",
-    STUDENT: "/student",
-  };
-
-  return (
-    <main className="mx-auto min-h-screen max-w-5xl px-6 py-12">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-6">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">CampusHub</p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">Dashboard</h1>
-        </div>
-        <button
-          onClick={() => void logout()}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white"
-        >
-          Keluar
-        </button>
-      </header>
-      <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6">
-        <p className="text-sm text-slate-500">Masuk sebagai</p>
-        <h2 className="mt-1 text-xl font-semibold text-slate-900">{user.name}</h2>
-        <p className="text-slate-600">{user.email}</p>
-        <p className="mt-4 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700">
-          {user.role}
-        </p>
-        <div className="mt-6">
-          <div className="flex flex-wrap gap-3">
-            <Link className={secondaryLinkClass} to={rolePath[user.role]}>
-              Buka area {roleLabel[user.role]}
-            </Link>
-            {user.role === "LECTURER" && (
-              <>
-                <Link className={secondaryLinkClass} to="/lecturer/assignments">Tugas & penilaian</Link>
-                <Link className={secondaryLinkClass} to="/lecturer/attendance">Absensi QR</Link>
-              </>
-            )}
-            {user.role === "STUDENT" && (
-              <>
-                <Link className={secondaryLinkClass} to="/student/assignments">Tugas saya</Link>
-                <Link className={secondaryLinkClass} to="/student/attendance">Absensi saya</Link>
-              </>
-            )}
-          </div>
-        </div>
-      </section>
-    </main>
-  );
-}
-
 function RolePage({ role }: { role: UserRole }) {
   if (role === "ADMIN") return <AdminCoursesPage />;
   if (role === "LECTURER") return <LecturerClassesPage />;
@@ -134,12 +89,6 @@ function RolePage({ role }: { role: UserRole }) {
 function LoadingPage() {
   return <main className="grid min-h-screen place-items-center text-slate-600">Memuat sesi...</main>;
 }
-
-const roleLabel: Record<UserRole, string> = {
-  ADMIN: "Admin",
-  LECTURER: "Dosen",
-  STUDENT: "Mahasiswa",
-};
 
 const primaryLinkClass =
   "rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white hover:bg-indigo-700";
