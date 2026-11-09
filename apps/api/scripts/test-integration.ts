@@ -51,6 +51,7 @@ async function main(): Promise<void> {
       "src/modules/classes/classes.integration.test.ts",
       "src/modules/assignments/assignments.integration.test.ts",
       "src/modules/attendance/attendance.integration.test.ts",
+      "src/modules/analytics/analytics-notifications.integration.test.ts",
     ],
     {
       stdio: "inherit",

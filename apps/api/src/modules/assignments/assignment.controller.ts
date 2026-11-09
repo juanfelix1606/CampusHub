@@ -106,6 +106,18 @@ export class AssignmentController {
     });
   };
 
+  exportClassGrades = async (request: Request, response: Response): Promise<void> => {
+    const csv = await this.service.exportClassGrades(
+      uuidSchema.parse(request.params.classId),
+      request.authUser!,
+    );
+    response
+      .setHeader("Content-Type", "text/csv; charset=utf-8")
+      .setHeader("Content-Disposition", `attachment; filename="grades-class-${request.params.classId}.csv"`)
+      .setHeader("X-Content-Type-Options", "nosniff")
+      .send(csv);
+  };
+
   downloadAttachment = async (request: Request, response: Response): Promise<void> => {
     const file = await this.service.downloadAttachment(
       uuidSchema.parse(request.params.assignmentId),

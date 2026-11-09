@@ -10,6 +10,11 @@ export function createAssignmentRouter(controller: AssignmentController, secret:
   const router = Router();
   router.use(authenticate(secret));
   router.get("/classes/:classId/grades/me", authorize("STUDENT"), controller.classGrades);
+  router.get(
+    "/classes/:classId/grades/export.csv",
+    authorize("ADMIN", "LECTURER"),
+    controller.exportClassGrades,
+  );
   router.post(
     "/classes/:classId/assignments",
     authorize("LECTURER"),

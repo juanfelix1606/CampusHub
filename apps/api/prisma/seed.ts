@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
-import { AttendanceStatus, PrismaClient, UserRole } from "@prisma/client";
+import { AttendanceStatus, NotificationType, PrismaClient, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 dotenv.config({ path: resolve(__dirname, "../../../.env") });
@@ -305,6 +305,102 @@ async function main(): Promise<void> {
         status: AttendanceStatus.EXCUSED,
         reason: "Izin disetujui dosen",
       },
+    });
+  }
+
+  const classAnnouncement = await prisma.announcement.upsert({
+    where: { id: "00000000-0000-4000-8000-000000000701" },
+    update: {
+      authorId: lecturer.id,
+      sectionId: section.id,
+      title: "Jadwal konsultasi proyek",
+      body: "Konsultasi proyek tersedia setiap Rabu pukul 13.00-15.00 di ruang dosen.",
+    },
+    create: {
+      id: "00000000-0000-4000-8000-000000000701",
+      authorId: lecturer.id,
+      sectionId: section.id,
+      title: "Jadwal konsultasi proyek",
+      body: "Konsultasi proyek tersedia setiap Rabu pukul 13.00-15.00 di ruang dosen.",
+    },
+  });
+  const globalAnnouncement = await prisma.announcement.upsert({
+    where: { id: "00000000-0000-4000-8000-000000000702" },
+    update: {
+      authorId: admin.id,
+      sectionId: null,
+      title: "Selamat datang di semester baru",
+      body: "Periksa dashboard secara berkala untuk informasi akademik terbaru.",
+    },
+    create: {
+      id: "00000000-0000-4000-8000-000000000702",
+      authorId: admin.id,
+      sectionId: null,
+      title: "Selamat datang di semester baru",
+      body: "Periksa dashboard secara berkala untuk informasi akademik terbaru.",
+    },
+  });
+  const demoNotifications = [
+    {
+      id: "00000000-0000-4000-8000-000000000711",
+      userId: students[0].id,
+      type: NotificationType.ANNOUNCEMENT,
+      title: classAnnouncement.title,
+      body: classAnnouncement.body,
+      href: "/dashboard",
+      readAt: null,
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000712",
+      userId: students[0].id,
+      type: NotificationType.GRADE,
+      title: "Nilai tersedia: Rancangan kebutuhan sistem",
+      body: "Dosen telah memberikan nilai dan feedback untuk tugasmu.",
+      href: "/student/assignments",
+      readAt: null,
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000713",
+      userId: students[0].id,
+      type: NotificationType.ANNOUNCEMENT,
+      title: globalAnnouncement.title,
+      body: globalAnnouncement.body,
+      href: "/dashboard",
+      readAt: new Date(),
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000714",
+      userId: students[1].id,
+      type: NotificationType.ASSIGNMENT,
+      title: "Tugas baru: Diagram arsitektur",
+      body: "Tugas baru tersedia. Buka daftar tugas untuk melihat detail.",
+      href: "/student/assignments",
+      readAt: null,
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000715",
+      userId: students[1].id,
+      type: NotificationType.ATTENDANCE,
+      title: "Sesi absensi dibuka",
+      body: "Sesi absensi dibuka. Segera lakukan check-in melalui QR.",
+      href: "/student/attendance",
+      readAt: null,
+    },
+    {
+      id: "00000000-0000-4000-8000-000000000716",
+      userId: students[1].id,
+      type: NotificationType.ANNOUNCEMENT,
+      title: globalAnnouncement.title,
+      body: globalAnnouncement.body,
+      href: "/dashboard",
+      readAt: null,
+    },
+  ];
+  for (const notification of demoNotifications) {
+    await prisma.notification.upsert({
+      where: { id: notification.id },
+      update: notification,
+      create: notification,
     });
   }
 

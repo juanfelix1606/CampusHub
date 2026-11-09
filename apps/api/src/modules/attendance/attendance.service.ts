@@ -2,13 +2,14 @@ import { randomUUID } from "node:crypto";
 import { AttendanceStatus, UserRole } from "@prisma/client";
 import { ConflictError, ForbiddenError, NotFoundError } from "../../shared/errors";
 import { paginated } from "../../shared/pagination";
+import type { DomainEventBus } from "../../shared/domain-events";
 import { PrismaAttendanceRepository } from "./attendance.repository";
 import type {
   AttendanceListInput,
   OpenSessionInput,
   StatusOverrideInput,
 } from "./attendance.schemas";
-import { attendanceCsv } from "./attendance.rules";
+import { attendanceCsv } from "../../shared/csv";
 import { hashSessionNonce, issueQrToken, verifyQrToken } from "./attendance-token";
 
 type AttendanceUser = { id: string; role: UserRole };
@@ -17,6 +18,7 @@ export class AttendanceService {
   constructor(
     private readonly repository: PrismaAttendanceRepository,
     private readonly qrSecret: string,
+    private readonly events: DomainEventBus,
   ) {}
 
   async openSession(classId: string, lecturerId: string, input: OpenSessionInput) {
@@ -28,6 +30,12 @@ export class AttendanceService {
       now,
       hashSessionNonce(),
     );
+    await this.events.publish({
+      type: "attendance.opened",
+      sectionId: classId,
+      sessionId: session.id,
+      title: session.title,
+    });
     return this.publicSession(session);
   }
 

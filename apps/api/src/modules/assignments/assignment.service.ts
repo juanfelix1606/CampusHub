@@ -8,6 +8,8 @@ import {
   NotFoundError,
 } from "../../shared/errors";
 import { paginated } from "../../shared/pagination";
+import type { DomainEventBus } from "../../shared/domain-events";
+import { attendanceCsv } from "../../shared/csv";
 import type { FileStorage } from "../materials/file-storage";
 import {
   validateMaterialFile,
@@ -33,6 +35,7 @@ export class AssignmentService {
   constructor(
     private readonly repository: PrismaAssignmentRepository,
     private readonly storage: FileStorage,
+    private readonly events: DomainEventBus,
   ) {}
 
   async list(input: AssignmentListQuery, user: AssignmentUser) {
@@ -90,14 +93,20 @@ export class AssignmentService {
   ) {
     await this.assertLecturerOwnsClass(classId, lecturerId);
     const storedFile = file ? await this.storeFile(file) : undefined;
+    let assignment;
     try {
-      return this.publicAssignment(
-        await this.repository.create(classId, lecturerId, input, storedFile),
-      );
+      assignment = await this.repository.create(classId, lecturerId, input, storedFile);
     } catch (error) {
       if (storedFile) await this.storage.delete(storedFile.key);
       throw error;
     }
+    await this.events.publish({
+      type: "assignment.created",
+      sectionId: classId,
+      assignmentId: assignment.id,
+      title: assignment.title,
+    });
+    return this.publicAssignment(assignment);
   }
 
   async update(
@@ -207,7 +216,59 @@ export class AssignmentService {
     const assignment = await this.requireLecturerAssignment(assignmentId, lecturerId);
     assertGradeWithinMaximum(input.score, assignment.maxScore);
     const submission = await this.repository.grade(assignmentId, submissionId, lecturerId, input);
+    await this.events.publish({
+      type: "assignment.graded",
+      studentId: submission.studentId,
+      assignmentId,
+      title: assignment.title,
+    });
     return this.publicSubmission(submission);
+  }
+
+  async exportClassGrades(classId: string, user: AssignmentUser): Promise<string> {
+    if (user.role !== "ADMIN" && user.role !== "LECTURER") {
+      throw new ForbiddenError("Only admins or the assigned lecturer can export class grades.");
+    }
+    const section = await this.repository.gradeExport(classId);
+    if (!section) throw new NotFoundError("Class section not found.");
+    if (user.role === "LECTURER" && section.lecturerId !== user.id) {
+      throw new ForbiddenError("You do not teach this class.");
+    }
+    const rows = section.enrollments.flatMap(({ student }) =>
+      section.assignments.map((assignment) => {
+        const submission = assignment.submissions.find((item) => item.studentId === student.id);
+        return {
+          course: section.course.code,
+          class: section.name,
+          semester: section.semester.name,
+          studentId: student.id,
+          studentName: student.name,
+          email: student.email,
+          assignment: assignment.title,
+          deadline: assignment.deadline,
+          score: submission?.score === null || submission?.score === undefined
+            ? null
+            : Number(submission.score),
+          maxScore: assignment.maxScore,
+          feedback: submission?.feedback ?? null,
+          gradedAt: submission?.gradedAt ?? null,
+        };
+      }),
+    );
+    return attendanceCsv(rows, [
+      "course",
+      "class",
+      "semester",
+      "studentId",
+      "studentName",
+      "email",
+      "assignment",
+      "deadline",
+      "score",
+      "maxScore",
+      "feedback",
+      "gradedAt",
+    ]);
   }
 
   async classGrades(classId: string, studentId: string) {

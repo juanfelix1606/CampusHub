@@ -2,8 +2,8 @@ export const openApiDocument = {
   openapi: "3.0.3",
   info: {
     title: "CampusHub API",
-    version: "0.4.0",
-    description: "API autentikasi, kelas, materi, tugas, penilaian, dan absensi QR CampusHub.",
+    version: "0.5.0",
+    description: "API CampusHub untuk autentikasi, kelas, materi, tugas, absensi QR, analitik, pengumuman, dan notifikasi.",
   },
   servers: [{ url: "/api/v1" }],
   components: {
@@ -581,6 +581,80 @@ export const openApiDocument = {
         security: [{ bearerAuth: [] }],
         parameters: [{ in: "path", name: "classId", required: true, schema: { type: "string", format: "uuid" } }],
         responses: { "200": { description: "CSV dengan UTF-8 BOM dan escaping formula." }, "403": { description: "Dosen bukan pengampu." } },
+      },
+    },
+    "/dashboard": {
+      get: {
+        summary: "Dashboard analitik sesuai role pengguna",
+        description: "Agregasi mahasiswa, dosen, atau admin dilakukan di server; data kelas dosen dibatasi pada kelas yang diampu.",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Ringkasan analitik sesuai role." }, "401": { description: "Access token tidak valid." } },
+      },
+    },
+    "/notifications": {
+      get: {
+        summary: "Daftar notifikasi milik pengguna saat ini",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "query", name: "page", schema: { type: "integer", minimum: 1 } },
+          { in: "query", name: "pageSize", schema: { type: "integer", minimum: 1, maximum: 100 } },
+        ],
+        responses: { "200": { description: "Notifikasi terpaginasikan dan jumlah belum dibaca." } },
+      },
+    },
+    "/notifications/{notificationId}/read": {
+      patch: {
+        summary: "Tandai notifikasi milik pengguna sebagai dibaca",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "notificationId", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "200": { description: "Notifikasi diperbarui." }, "404": { description: "Notifikasi tidak ditemukan atau bukan milik pengguna." } },
+      },
+    },
+    "/notifications/read-all": {
+      post: {
+        summary: "Tandai semua notifikasi pengguna sebagai dibaca",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Jumlah notifikasi yang diperbarui." } },
+      },
+    },
+    "/announcements": {
+      get: {
+        summary: "Daftar pengumuman yang dapat dilihat pengguna",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "query", name: "page", schema: { type: "integer", minimum: 1 } },
+          { in: "query", name: "pageSize", schema: { type: "integer", minimum: 1, maximum: 100 } },
+        ],
+        responses: { "200": { description: "Pengumuman global dan pengumuman sesuai enrollment/kelas dosen." } },
+      },
+      post: {
+        summary: "Buat pengumuman kelas atau global (Admin/Dosen)",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["title", "body"],
+                properties: {
+                  sectionId: { type: "string", format: "uuid", description: "Opsional; tanpa sectionId hanya Admin dapat membuat pengumuman global." },
+                  title: { type: "string", minLength: 2, maxLength: 160 },
+                  body: { type: "string", minLength: 2, maxLength: 5000 },
+                },
+              },
+            },
+          },
+        },
+        responses: { "201": { description: "Pengumuman dibuat dan notifikasi dikirim ke audiens." }, "403": { description: "Role atau akses kelas tidak diizinkan." } },
+      },
+    },
+    "/classes/{classId}/grades/export.csv": {
+      get: {
+        summary: "Ekspor rekap nilai kelas ke CSV",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "classId", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: { "200": { description: "CSV aman dari formula injection." }, "403": { description: "Hanya Admin atau dosen pengampu." } },
       },
     },
   },

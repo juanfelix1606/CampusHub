@@ -428,6 +428,33 @@ export class PrismaAssignmentRepository {
     };
   }
 
+  gradeExport(classId: string) {
+    return this.prisma.classSection.findUnique({
+      where: { id: classId },
+      select: {
+        id: true,
+        lecturerId: true,
+        course: { select: { code: true, name: true } },
+        name: true,
+        semester: { select: { name: true } },
+        enrollments: {
+          include: {
+            student: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: { student: { name: "asc" } },
+        },
+        assignments: {
+          include: {
+            submissions: {
+              select: { studentId: true, score: true, feedback: true, gradedAt: true },
+            },
+          },
+          orderBy: { deadline: "asc" },
+        },
+      },
+    });
+  }
+
   async attachment(id: string) {
     const assignment = await this.prisma.assignment.findUnique({
       where: { id },

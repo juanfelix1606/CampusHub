@@ -34,6 +34,15 @@ import { PrismaAttendanceRepository } from "./modules/attendance/attendance.repo
 import { AttendanceService } from "./modules/attendance/attendance.service";
 import { AttendanceController } from "./modules/attendance/attendance.controller";
 import { createAttendanceRouter } from "./modules/attendance/attendance.routes";
+import { AnalyticsController } from "./modules/analytics/analytics.controller";
+import { PrismaAnalyticsRepository } from "./modules/analytics/analytics.repository";
+import { AnalyticsService } from "./modules/analytics/analytics.service";
+import { createAnalyticsRouter } from "./modules/analytics/analytics.routes";
+import { NotificationController } from "./modules/notifications/notification.controller";
+import { PrismaNotificationRepository } from "./modules/notifications/notification.repository";
+import { NotificationService } from "./modules/notifications/notification.service";
+import { createNotificationRouter } from "./modules/notifications/notification.routes";
+import { DomainEventBus } from "./shared/domain-events";
 
 export function createApp(
   config: AuthConfig,
@@ -45,6 +54,10 @@ export function createApp(
 ): express.Express {
   const app = express();
   const database = dependencies.database ?? prisma;
+  const domainEvents = new DomainEventBus();
+  const notificationRepository = new PrismaNotificationRepository(database);
+  const notificationService = new NotificationService(notificationRepository, domainEvents);
+  const notificationController = new NotificationController(notificationService);
   const fileStorage = dependencies.materialStorage ?? new LocalFileStorage();
   const authService = new AuthService(repository, config);
   const authController = new AuthController(authService, config);
@@ -58,11 +71,17 @@ export function createApp(
   );
   const assignmentRepository = new PrismaAssignmentRepository(database);
   const assignmentController = new AssignmentController(
-    new AssignmentService(assignmentRepository, fileStorage),
+    new AssignmentService(assignmentRepository, fileStorage, domainEvents),
   );
   const attendanceRepository = new PrismaAttendanceRepository(database);
   const attendanceController = new AttendanceController(
-    new AttendanceService(attendanceRepository, config.attendanceQrSecret),
+    new AttendanceService(attendanceRepository, config.attendanceQrSecret, domainEvents),
+  );
+  const analyticsController = new AnalyticsController(
+    new AnalyticsService(new PrismaAnalyticsRepository(database), {
+      attendancePercent: readThreshold("DASHBOARD_RISK_ATTENDANCE_PERCENT", 75, 0, 100),
+      missedAssignments: readThreshold("DASHBOARD_RISK_MISSED_ASSIGNMENTS", 2, 1, 100),
+    }),
   );
 
   app.disable("x-powered-by");
@@ -96,8 +115,20 @@ export function createApp(
   app.use("/api/v1/materials", createMaterialRouter(materialController, config.accessTokenSecret));
   app.use("/api/v1", createAssignmentRouter(assignmentController, config.accessTokenSecret));
   app.use("/api/v1", createAttendanceRouter(attendanceController, config.accessTokenSecret));
+  app.use("/api/v1", createAnalyticsRouter(analyticsController, config.accessTokenSecret));
+  app.use("/api/v1", createNotificationRouter(notificationController, config.accessTokenSecret));
   app.use(notFoundHandler);
   app.use(errorHandler);
 
   return app;
+}
+
+function readThreshold(name: string, fallback: number, min: number, max: number): number {
+  const configured = process.env[name];
+  if (configured === undefined || configured.trim() === "") return fallback;
+  const parsed = Number(configured);
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+    throw new Error(`${name} must be a number between ${min} and ${max}.`);
+  }
+  return parsed;
 }
