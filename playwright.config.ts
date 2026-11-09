@@ -38,7 +38,7 @@ export default defineConfig({
       env: apiEnvironment,
     },
     {
-      command: "npm run dev:web -- --host 127.0.0.1",
+      command: "npm run dev --workspace @campushub/web -- --host 127.0.0.1",
       url: "http://127.0.0.1:5173",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
