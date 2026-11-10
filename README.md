@@ -4,13 +4,31 @@
 
 CampusHub adalah proyek portofolio sistem informasi kampus yang menggabungkan LMS sederhana dan absensi QR. Admin mengelola struktur akademik, dosen mengelola kelas serta penilaian, dan mahasiswa mengakses materi, mengumpulkan tugas, serta mencatat kehadiran. Aplikasi menggunakan React dan Express dalam monorepo TypeScript, PostgreSQL/Prisma, penyimpanan file privat, dashboard analitik, dan pengujian otomatis.
 
-## Live demo
+## Demo
 
-**Belum tersedia** — URL akan ditambahkan setelah deployment dan verifikasi production selesai. Backend hosting gratis dapat mengalami *cold start*: request pertama setelah periode tidak aktif bisa lebih lambat.
+**Demo live belum tersedia.** Konfigurasi deploy sudah disiapkan (Vercel + Render + Neon + S3) tetapi belum dideploy. Backend Render belum dibuat karena proses pembuatan layanan meminta verifikasi kartu.
+
+**Video demo:** [Ganti dengan tautan video demo](<URL_VIDEO_DEMO>) (placeholder; rekam dan unggah sendiri).
+
+Lihat [skrip video demo 2 menit](docs/DEMO-SCRIPT.md) dan tangkapan layar aplikasi yang dibuat dari seed pada PostgreSQL lokal terisolasi:
+
+![Dashboard mahasiswa](docs/screenshots/dashboard-mahasiswa.png)
+
+![Dashboard dosen](docs/screenshots/dashboard-dosen.png)
+
+![Dashboard admin](docs/screenshots/dashboard-admin.png)
+
+![Notifikasi mahasiswa](docs/screenshots/notifikasi-mahasiswa.png)
+
+![Sesi absensi dosen](docs/screenshots/sesi-absensi.png)
+
+![Tugas dan penilaian dosen](docs/screenshots/tugas-penilaian-dosen.png)
+
+![Daftar tugas mahasiswa](docs/screenshots/tugas-mahasiswa.png)
 
 ### Akun demo
 
-Akun berikut dibuat oleh seed; ketersediaan pada demo online belum diverifikasi.
+Akun berikut dibuat oleh seed untuk lingkungan lokal. Tidak ada akun demo online karena demo live belum tersedia.
 
 | Role | Email |
 | --- | --- |
@@ -19,11 +37,7 @@ Akun berikut dibuat oleh seed; ketersediaan pada demo online belum diverifikasi.
 | Mahasiswa | `mahasiswa1@campushub.local` |
 | Mahasiswa | `mahasiswa2@campushub.local` |
 
-**Password demo online:** belum ditentukan. Jangan gunakan ulang password pribadi. Untuk lokal, seluruh akun seed menggunakan `DEMO_PASSWORD` dari environment; password tidak disimpan di repositori. Lihat [panduan deployment](docs/DEPLOYMENT.md) untuk batasan akun admin demo dan cara seed/reset database khusus demo.
-
-## Tampilan
-
-Screenshot baru akan ditambahkan setelah aplikasi live dan data demo siap. Screenshot pengujian lokal lama tetap disimpan di direktori dokumentasi, tetapi tidak ditampilkan sebagai materi promosi.
+**Password:** tidak dicantumkan di repositori. Untuk lokal, seluruh akun seed menggunakan `DEMO_PASSWORD` dari environment; gunakan password sementara yang hanya untuk demo. Lihat [panduan deployment](docs/DEPLOYMENT.md) untuk batasan akun admin demo dan cara seed/reset database khusus demo.
 
 ## Fitur per role
 
@@ -80,7 +94,7 @@ erDiagram
 | Backend | Node.js, Express, TypeScript, Zod, JWT, bcrypt, Helmet, rate limiting |
 | Data dan file | PostgreSQL, Prisma ORM, filesystem lokal atau AWS SDK v3 untuk S3-compatible |
 | Testing dan operasi | Vitest, Supertest, Playwright, Docker Compose, GitHub Actions |
-| Target deployment | Vercel, Render, Neon, storage S3-compatible — belum diverifikasi di production |
+| Target deployment | Vercel, Render, Neon, storage S3-compatible — konfigurasi disiapkan, belum dideploy |
 
 ## Struktur
 
@@ -100,23 +114,39 @@ docker-compose.yml   PostgreSQL lokal dan test
 
 ## Instalasi lokal
 
-Prasyarat: Node.js 20.19+ dan npm, serta Docker Compose untuk PostgreSQL lokal. Gunakan terminal PowerShell pada root proyek:
+Prasyarat: Node.js 20.19+ dan npm, serta Docker Desktop dengan Docker Compose. Langkah berikut menjalankan PostgreSQL lokal melalui Compose dan tidak memerlukan Neon atau provider cloud.
 
-1. Salin konfigurasi jika belum ada: `Copy-Item .env.example .env`. Jangan commit `.env`.
-2. Atur `DATABASE_URL` dan `TEST_DATABASE_URL` sesuai Compose; database test harus terpisah dan namanya berakhiran `_test`. Isi `DEMO_PASSWORD` dengan password lokal sementara minimal 12 karakter.
-3. Isi `JWT_ACCESS_SECRET` dan `ATTENDANCE_QR_SECRET` dengan **dua** nilai acak yang berbeda, masing-masing minimal 32 karakter dengan 12 karakter unik. Generator: `node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"`. Jangan membagikan outputnya.
-4. Jalankan:
+Gunakan PowerShell pada root proyek:
+
+1. Salin contoh konfigurasi dan pasang dependency:
+
+   ```powershell
+   Copy-Item .env.example .env
+   npm ci
+   ```
+
+   Jangan commit `.env`. Jika file sudah ada, jangan menimpanya; tinjau dan sesuaikan nilainya secara lokal.
+2. Pada `.env`, pastikan URL menunjuk ke database Compose lokal:
+   - `DATABASE_URL` memakai konfigurasi lokal di `.env.example` dan mengarah ke `localhost:5432/campushub`.
+   - `TEST_DATABASE_URL` mengarah ke `localhost:5433/campushub_test` (khusus integration test).
+   - Biarkan `DIRECT_DATABASE_URL` kosong untuk development lokal agar Prisma memakai `DATABASE_URL`.
+   - Isi `DEMO_PASSWORD` dengan password sementara minimal 12 karakter. Isi `JWT_ACCESS_SECRET` dan `ATTENDANCE_QR_SECRET` dengan dua nilai acak berbeda, masing-masing minimal 32 karakter dan 12 karakter unik. Untuk setiap secret, jalankan perintah berikut satu kali; jangan gunakan output yang sama untuk keduanya atau membagikannya:
+
+   ```powershell
+   node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
+   ```
+
+3. Jalankan PostgreSQL lokal, migrasi, seed, dan API:
 
    ```powershell
    docker compose up -d db
-   npm ci
    npm run db:generate
    npm run db:migrate
    npm run db:seed
    npm run dev
    ```
 
-5. Di terminal lain jalankan `npm run dev:web`, lalu buka `http://localhost:5173`. Health API: `http://localhost:3000/api/v1/health`. Dokumentasi Swagger tersedia lokal di `http://localhost:3000/api/docs`; dinonaktifkan di production.
+4. Di terminal PowerShell kedua, pada root proyek jalankan `npm run dev:web`, lalu buka `http://localhost:5173`. Health API: `http://localhost:3000/api/v1/health`. Dokumentasi Swagger tersedia lokal di `http://localhost:3000/api/docs`; dinonaktifkan di production.
 
 Storage default adalah lokal. File PDF, PNG, dan JPEG dibatasi 10 MB serta divalidasi ekstensi, MIME, dan magic bytes. Storage S3 menggunakan bucket privat; unduhan melewati pemeriksaan akses backend. Konfigurasi provider, smoke test, migrasi Neon, dan reset demo dijelaskan di [panduan deployment](docs/DEPLOYMENT.md).
 
@@ -148,13 +178,13 @@ Integration test menerapkan migrasi dan memodifikasi database yang ditunjuk `TES
 ## Known issues dan batasan
 
 - Audit terdahulu melaporkan tiga temuan high pada dependency Prisma 6 / `deepmerge-ts` ([GHSA-ggr8-5vv4-36mx](https://github.com/advisories/GHSA-ggr8-5vv4-36mx)) dan tujuh moderate pada tooling `minimatch` ([GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)). Ini **snapshot audit sebelumnya**, bukan hasil audit terkini; jalankan `npm audit` dan tinjau perbaikan serta kompatibilitas sebelum rilis publik.
-- Server S3 mock CI tidak memverifikasi signature kriptografis dan bukan pengganti smoke test terhadap provider sungguhan. Neon, provider S3, serta scan kamera HP via HTTPS belum diverifikasi di production.
-- Rate limit menggunakan memori per instance; bukan pembatas terdistribusi. Jumlah proxy hop dan identitas IP klien harus diuji pada topologi deployment sebenarnya.
-- Screenshot pengujian lokal sebagian berlabel smoke test dan grafik dosen memiliki label sumbu yang rapat; screenshot baru direncanakan setelah deployment.
+- Smoke test storage terhadap provider S3 nyata (Supabase) berhasil untuk operasi put/get/delete. Namun alur upload dan download materi melalui aplikasi pada production **belum diverifikasi**; CI memakai mock S3 yang tidak menggantikan pengujian provider nyata.
+- Aplikasi **belum dideploy**. Alur login, refresh, upload materi, dan scan kamera HP melalui HTTPS di production belum diverifikasi. Konfigurasi `PROXY_HOPS=2` adalah hipotesis dan belum diukur di production; rate limiter saat ini menggunakan memori per instance, bukan pembatas terdistribusi.
+- Screenshot pada README dibuat dari seed di cluster PostgreSQL lokal sementara, bukan dari production. Cluster tersebut sudah dibersihkan; tangkapan layar lama tetap disimpan di folder dokumentasi dan tidak lagi ditampilkan di README.
 
 ## Roadmap
 
-1. Verifikasi provider storage, Neon, proxy dan alur end-to-end di deployment nyata; tambahkan URL demo setelah siap.
+1. Selesaikan verifikasi akun hosting, deploy backend dan frontend, lalu uji storage, proxy, dan alur end-to-end; tambahkan URL demo setelah siap.
 2. Tinjau advisory dependency dan jalur upgrade yang kompatibel.
 3. Perbarui screenshot demo dan pertimbangkan rate limiting terdistribusi bila berjalan pada banyak instance.
 

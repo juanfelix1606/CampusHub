@@ -1,6 +1,6 @@
 # Catatan portofolio dan interview
 
-Gunakan sebagai bahan yang dapat dijelaskan sendiri; sesuaikan setiap pernyataan dengan kontribusimu yang sebenarnya, termasuk penggunaan bantuan AI. Jangan mengklaim deployment/provider sudah terverifikasi sebelum diuji.
+Gunakan sebagai bahan yang dapat dijelaskan sendiri; sesuaikan setiap pernyataan dengan kontribusimu yang sebenarnya, termasuk penggunaan bantuan AI. **Aplikasi belum dideploy ke production.** Tangkapan layar dan alur yang dicoba berasal dari lingkungan lokal; jangan menyiratkan aplikasi sudah live.
 
 ## Bullet CV — Bahasa Indonesia
 
@@ -24,6 +24,10 @@ CampusHub adalah LMS sederhana dan sistem absensi QR berbasis React, Express, da
 
 `typescript`, `react`, `express`, `postgresql`, `prisma`, `vite`, `qr-code`, `learning-management-system`, `role-based-access-control`, `playwright`.
 
+## Bio / README profil GitHub
+
+Saya mahasiswa Informatika yang membangun proyek full-stack untuk memperdalam pengembangan aplikasi web. CampusHub adalah LMS sederhana dengan tugas, penilaian, analitik, dan absensi QR menggunakan React, TypeScript, Express, dan PostgreSQL. Proyek ini belum live; dokumentasi, screenshot lokal, dan pengujian tersedia di repositori.
+
 ## Pertanyaan interview dan jawaban singkat
 
 1. **Mengapa QR berotasi?** Token JWT terikat sesi dan slot 30 detik yang diperiksa dengan waktu server, sehingga token lama cepat kedaluwarsa; ini tidak membuktikan lokasi fisik mahasiswa. Lihat [attendance-token.ts](../apps/api/src/modules/attendance/attendance-token.ts).
@@ -34,5 +38,5 @@ CampusHub adalah LMS sederhana dan sistem absensi QR berbasis React, Express, da
 6. **Bagaimana unduhan file dilindungi?** Backend memeriksa hak akses sebelum streaming dari `FileStorage`; key objek acak, bucket harus privat, dan URL publik permanen tidak dibuat. Lihat [s3-file.storage.ts](../apps/api/src/modules/materials/s3-file.storage.ts).
 7. **Apa itu CSV injection?** Spreadsheet dapat menafsirkan sel tertentu sebagai formula. Helper CSV menetralkan nilai berisiko dan mengutip sel; ini diuji pada ekspor. Lihat [csv.ts](../apps/api/src/shared/csv.ts).
 8. **Mengapa menggunakan pooled dan direct URL database?** Pooler mengelola koneksi aplikasi, sedangkan migrasi Prisma memakai direct URL; integration runner menimpa keduanya agar tidak memigrasi database lain. Lihat [prisma.config.ts](../apps/api/prisma.config.ts) dan [test-integration.ts](../apps/api/scripts/test-integration.ts).
-9. **Apa yang dibuktikan test S3 mock?** Mock menguji bentuk operasi dan integrasi aplikasi, tetapi tidak membuktikan signature kriptografis atau kompatibilitas provider nyata; gunakan smoke test terpisah terhadap bucket test privat.
+9. **Apa yang dibuktikan test S3?** CI memakai mock untuk memeriksa operasi dan integrasi aplikasi. Smoke test terpisah terhadap Supabase Storage nyata berhasil untuk put/get/delete, tetapi belum membuktikan alur upload materi aplikasi di production.
 10. **Apa trade-off rate limiter saat ini?** Counter disimpan per instance, sehingga tidak menyatukan batas pada beberapa instance; IP di balik proxy juga bergantung pada konfigurasi trust yang benar.

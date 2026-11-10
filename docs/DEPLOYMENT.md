@@ -1,5 +1,7 @@
 # Panduan deploy CampusHub
 
+> **Status: belum dideploy.** Konfigurasi Vercel, Render, Neon, dan S3 sudah disiapkan, tetapi backend dan frontend belum dipublikasikan. Demo live belum tersedia; langkah di bawah adalah panduan, bukan bukti deployment berhasil.
+
 Panduan ini untuk demo portofolio, bukan sistem akademik dengan data sungguhan. Jangan masukkan secret ke Git, screenshot, chat, atau browser console. Layanan dan kuota gratis dapat berubah; periksa syarat masing-masing provider.
 
 ## Gambaran dan batasan
