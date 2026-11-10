@@ -6,25 +6,19 @@ CampusHub adalah proyek portofolio sistem informasi kampus yang menggabungkan LM
 
 ## Demo
 
-**Demo live belum tersedia.** Konfigurasi deploy sudah disiapkan (Vercel + Render + Neon + S3) tetapi belum dideploy. Backend Render belum dibuat karena proses pembuatan layanan meminta verifikasi kartu.
+**Demo live belum tersedia.** Lihat screenshot di bawah.
 
-**Video demo:** [Ganti dengan tautan video demo](<URL_VIDEO_DEMO>) (placeholder; rekam dan unggah sendiri).
+Konfigurasi deploy sudah disiapkan (Vercel + Render + Neon + S3) tetapi belum dideploy. Backend Render belum dibuat karena proses pembuatan layanan meminta verifikasi kartu.
 
-Lihat [skrip video demo 2 menit](docs/DEMO-SCRIPT.md) dan tangkapan layar aplikasi yang dibuat dari seed pada PostgreSQL lokal terisolasi:
-
-![Dashboard mahasiswa](docs/screenshots/dashboard-mahasiswa.png)
+Screenshot dibuat dari seed pada PostgreSQL lokal terisolasi:
 
 ![Dashboard dosen](docs/screenshots/dashboard-dosen.png)
-
-![Dashboard admin](docs/screenshots/dashboard-admin.png)
-
-![Notifikasi mahasiswa](docs/screenshots/notifikasi-mahasiswa.png)
 
 ![Sesi absensi dosen](docs/screenshots/sesi-absensi.png)
 
 ![Tugas dan penilaian dosen](docs/screenshots/tugas-penilaian-dosen.png)
 
-![Daftar tugas mahasiswa](docs/screenshots/tugas-mahasiswa.png)
+Screenshot lainnya: [dashboard mahasiswa](docs/screenshots/dashboard-mahasiswa.png), [dashboard admin](docs/screenshots/dashboard-admin.png), [notifikasi mahasiswa](docs/screenshots/notifikasi-mahasiswa.png), dan [daftar tugas mahasiswa](docs/screenshots/tugas-mahasiswa.png).
 
 ### Akun demo
 
