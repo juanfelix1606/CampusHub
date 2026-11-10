@@ -180,7 +180,7 @@ Integration test menerapkan migrasi dan memodifikasi database yang ditunjuk `TES
 - Audit terdahulu melaporkan tiga temuan high pada dependency Prisma 6 / `deepmerge-ts` ([GHSA-ggr8-5vv4-36mx](https://github.com/advisories/GHSA-ggr8-5vv4-36mx)) dan tujuh moderate pada tooling `minimatch` ([GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)). Ini **snapshot audit sebelumnya**, bukan hasil audit terkini; jalankan `npm audit` dan tinjau perbaikan serta kompatibilitas sebelum rilis publik.
 - Smoke test storage terhadap provider S3 nyata (Supabase) berhasil untuk operasi put/get/delete. Namun alur upload dan download materi melalui aplikasi pada production **belum diverifikasi**; CI memakai mock S3 yang tidak menggantikan pengujian provider nyata.
 - Aplikasi **belum dideploy**. Alur login, refresh, upload materi, dan scan kamera HP melalui HTTPS di production belum diverifikasi. Konfigurasi `PROXY_HOPS=2` adalah hipotesis dan belum diukur di production; rate limiter saat ini menggunakan memori per instance, bukan pembatas terdistribusi.
-- Screenshot pada README dibuat dari seed di cluster PostgreSQL lokal sementara, bukan dari production. Cluster tersebut sudah dibersihkan; tangkapan layar lama tetap disimpan di folder dokumentasi dan tidak lagi ditampilkan di README.
+- Screenshot pada README dibuat dari seed di cluster PostgreSQL lokal sementara, bukan dari production. Cluster tersebut sudah dibersihkan; empat screenshot lama yang tidak dipakai telah dihapus dari folder dokumentasi.
 
 ## Roadmap
 
